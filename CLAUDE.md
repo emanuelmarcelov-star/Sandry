@@ -74,6 +74,15 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
 - 28/10/2026 — Fase 7 (comprobantes/factura electrónica) se hace AL FINAL, después de la
   fase 8. El ticket interno sin valor tributario se entrega en la fase 5.
 
+## Dónde vive cada cosa
+
+- Código: GitHub `emanuelmarcelov-star/Sandry` (privado), rama `main`. Cada push a
+  `main` se publica solo en Netlify.
+- App publicada: https://storied-raindrop-2de6ba.netlify.app (Netlify, equipo "Tienda").
+  Visibilidad: producción pública, deploy previews privados.
+- Base de datos: Supabase, proyecto `sandry` (`csupvenhzqgyybyvznpc`), región East US.
+- Variables en Netlify: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+
 ## Pendientes de verificar (SRI / servicios)
 
 Ver la sección "Cosas a confirmar" en `docs/PLAN.md`.
