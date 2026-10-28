@@ -1,0 +1,7 @@
+# Configuración de despliegue en Netlify (Netlify detecta Next.js solo).
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "24"
