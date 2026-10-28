@@ -1,0 +1,34 @@
+# Dependencias
+node_modules/
+
+# Next.js
+.next/
+out/
+build/
+
+# Secretos (nunca subir a git)
+.env
+.env.local
+.env.*.local
+*.p12
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Pruebas
+coverage/
+playwright-report/
+test-results/
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+*.log
+.vercel
+
+# TypeScript / Next
+next-env.d.ts
+*.tsbuildinfo
+.env*
+!.env.example
