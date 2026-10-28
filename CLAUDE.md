@@ -24,6 +24,22 @@ Storage, RLS en TODAS las tablas) · Netlify · PWA · Resend (SMTP) · Recharts
 React Hook Form · ExcelJS · bwip-js · BarcodeDetector + `barcode-detector` (respaldo) ·
 Open Food Facts · decimal.js · Vitest + Playwright.
 
+## Comandos
+
+- `npm run dev` — app en http://localhost:3000
+- `npm test` — pruebas de lógica (Vitest, `tests/unit`)
+- `npm run test:e2e` — pruebas de flujos (Playwright, `tests/e2e`; hace build y levanta en :3100)
+- `npm run typecheck` · `npm run lint` · `npm run build`
+- En esta PC, si la terminal no encuentra `node`/`git`, recargar el PATH:
+  `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`
+
+## Notas de la versión de Next.js
+
+Next 16.4 con `cacheComponents` y `partialPrefetching`: los datos que cambian en cada
+visita van dentro de `<Suspense>` y llaman a `await connection()`. Antes de usar una API
+de Next, revisar `node_modules/next/dist/docs/` (ver `AGENTS.md`). El aviso sin conexión
+usa `useOffline` de `next/offline` (`experimental.useOffline`).
+
 ## Reglas técnicas no negociables
 
 - **Dinero**: nunca `number`/float para montos. BD: montos `numeric(12,4)`, cantidades
