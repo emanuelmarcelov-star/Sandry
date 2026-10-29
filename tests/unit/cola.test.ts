@@ -42,6 +42,13 @@ describe("cola de envíos sin señal", () => {
     expect(pendientes()).toEqual([]);
   });
 
+  test("si un envío se queda colgado (se fue la señal a medias), no bloquea la cola", async () => {
+    encolar(op("c1"));
+    const colgado = await enviarPendientes(() => new Promise(() => {}), 50);
+    expect(colgado).toEqual({ enviados: 0, sinRed: true });
+    expect(await enviarPendientes(async () => ({ ok: true }))).toEqual({ enviados: 1, sinRed: false });
+  });
+
   test("lo que el servidor rechaza queda marcado con el error y lo demás sigue", async () => {
     encolar(op("mala"));
     encolar(op("buena"));

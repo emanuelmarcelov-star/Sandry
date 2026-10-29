@@ -67,12 +67,26 @@ export type RespuestaEnvio = { ok: true } | { ok: false; mensaje: string };
 
 let enviando = false;
 
+/** Si la señal se va a medio envío, la petición puede quedarse colgada: se da por fallida. */
+function conLimite<T>(promesa: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolver, rechazar) => {
+    const reloj = setTimeout(() => rechazar(new Error("Sin respuesta")), ms);
+    promesa.then(
+      (v) => (clearTimeout(reloj), resolver(v)),
+      (e) => (clearTimeout(reloj), rechazar(e)),
+    );
+  });
+}
+
 /**
- * Envía en orden lo pendiente. Si falla la red, se detiene y lo intenta
- * después. Si el servidor rechaza algo (un dato mal), lo marca con el error y
- * sigue con lo demás que no dependa de eso.
+ * Envía en orden lo pendiente. Si falla la red (o no responde), se detiene y
+ * lo intenta después; reenviar no duplica nada. Si el servidor rechaza algo
+ * (un dato mal), lo marca con el error y sigue con lo demás.
  */
-export async function enviarPendientes(enviar: (op: Operacion) => Promise<RespuestaEnvio>): Promise<{ enviados: number; sinRed: boolean }> {
+export async function enviarPendientes(
+  enviar: (op: Operacion) => Promise<RespuestaEnvio>,
+  limiteMs = 15_000,
+): Promise<{ enviados: number; sinRed: boolean }> {
   if (enviando) return { enviados: 0, sinRed: false };
   enviando = true;
   let enviados = 0;
@@ -80,7 +94,7 @@ export async function enviarPendientes(enviar: (op: Operacion) => Promise<Respue
     for (const op of leer()) {
       let r: RespuestaEnvio;
       try {
-        r = await enviar(op);
+        r = await conLimite(enviar(op), limiteMs);
       } catch {
         return { enviados, sinRed: true };
       }

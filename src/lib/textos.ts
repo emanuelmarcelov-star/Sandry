@@ -258,6 +258,8 @@ export const textosCatalogo = {
     usarFoto: "Usar esta foto",
     guardar: "Guardar producto",
     historial: "Historial de precios",
+    preciosPorLugar: "Cuánto pagaste en cada lugar (por unidad)",
+    masBarato: "el más barato",
     sinHistorial: "Sin cambios todavía.",
   },
   stock: {

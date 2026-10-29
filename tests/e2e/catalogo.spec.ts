@@ -210,6 +210,7 @@ test("descargar el Excel, anotar lo que entró y salió, y volver a importarlo s
   const editado = Buffer.from(await libro.xlsx.writeBuffer());
 
   await page.goto("/catalogo");
+  await expect(page.getByRole("listitem").filter({ hasText: "Pan de sal" })).toBeVisible();
   const antes = await page.getByRole("listitem").count();
 
   await page.goto("/catalogo/importar");

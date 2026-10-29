@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Camera, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Aviso, Campo, Casilla, Selector } from "@/components/formulario";
+import { SoloCliente } from "@/components/solo-cliente";
 import { cantidadConUnidad, UNIDADES } from "@/lib/catalogo";
 import {
   buscarLocal,
@@ -53,7 +54,18 @@ function compraNueva(viajeId?: string, inicial?: Partial<DatosCompra>): DatosCom
  * a la tienda y cada lugar del viaje. Lo que se escribe se guarda en el
  * dispositivo mientras tanto (si se cierra o se va la señal, no se pierde).
  */
-export function FormularioCompra({
+export function FormularioCompra(props: PropsFormulario) {
+  // Arranca con el borrador guardado en el dispositivo, así que solo se dibuja en el navegador.
+  return (
+    <SoloCliente mientras={<p className="text-lg">{textos.general.cargando}</p>}>
+      <Formulario {...props} />
+    </SoloCliente>
+  );
+}
+
+type PropsFormulario = Parameters<typeof Formulario>[0];
+
+function Formulario({
   productos: productosIniciales,
   proveedores: proveedoresIniciales,
   cuentas,
@@ -80,20 +92,16 @@ export function FormularioCompra({
 }) {
   const [productos, setProductos] = useState(productosIniciales);
   const [proveedores, setProveedores] = useState(proveedoresIniciales);
-  const [datos, setDatos] = useState<DatosCompra>(() => compraNueva(viajeId, inicial));
-  const [recuperado, setRecuperado] = useState(false);
+  // Recupera lo que se estaba llenando (si había algo).
+  const [borrador] = useState(() => {
+    const b = leerBorrador<DatosCompra>(claveBorrador);
+    return b && (b.datos.lineas.length || b.datos.total) ? b.datos : null;
+  });
+  const [datos, setDatos] = useState<DatosCompra>(() => (borrador ? { ...borrador, viajeId } : compraNueva(viajeId, inicial)));
+  const [recuperado, setRecuperado] = useState(borrador !== null);
   const [errores, setErrores] = useState<string[]>([]);
   const [guardando, iniciar] = useTransition();
   const porId = useMemo(() => new Map(productos.map((p) => [p.id, p])), [productos]);
-
-  // Recupera lo que se estaba llenando.
-  useEffect(() => {
-    const b = leerBorrador<DatosCompra>(claveBorrador);
-    if (b && (b.datos.lineas.length || b.datos.total)) {
-      setDatos({ ...b.datos, viajeId });
-      setRecuperado(true);
-    }
-  }, [claveBorrador, viajeId]);
 
   function cambiar(cambios: Partial<DatosCompra>) {
     setDatos((d) => {

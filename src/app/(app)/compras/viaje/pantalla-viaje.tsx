@@ -7,6 +7,7 @@ import { Car, CheckCircle2, CircleDashed, Fuel, ListChecks, ShoppingBag, Truck }
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Aviso, Campo, Casilla, Selector } from "@/components/formulario";
+import { SoloCliente } from "@/components/solo-cliente";
 import { FormularioCompra } from "@/components/compras/formulario-compra";
 import { cantidadConUnidad, type UnidadBase } from "@/lib/catalogo";
 import { totalCompra, type ProductoLigero } from "@/lib/compras";
@@ -42,7 +43,6 @@ type Datos = {
 };
 
 const CLAVE_VIAJE = "viaje";
-const CLAVE_DATOS = "viaje-datos";
 
 /** Envía una operación pendiente al servidor. */
 async function enviar(op: Operacion): Promise<{ ok: true } | { ok: false; mensaje: string }> {
@@ -74,50 +74,51 @@ function pendientesCacheados(): Operacion[] {
  * El viaje de compras en el celular. Todo se guarda primero en el dispositivo y
  * se envía cuando hay señal; nada se pierde si se va la conexión.
  */
-export function PantallaViaje({
-  datos: datosServidor,
-  enCurso,
-  sugerida,
-  puedeCrearProducto,
-  puedeCrearLugar,
-}: {
-  datos: Datos;
-  enCurso: EstadoViaje | null;
-  sugerida: ItemLista[];
-  puedeCrearProducto: boolean;
-  puedeCrearLugar: boolean;
-}) {
-  const [viaje, setViaje] = useState<EstadoViaje | null>(null);
-  const [cargado, setCargado] = useState(false);
+type Props = { datos: Datos; enCurso: EstadoViaje | null; sugerida: ItemLista[]; puedeCrearProducto: boolean; puedeCrearLugar: boolean };
+
+export function PantallaViaje(props: Props) {
+  // Arranca con lo guardado en el celular, así que solo se dibuja en el navegador.
+  return (
+    <SoloCliente mientras={<p className="text-lg">{textos.general.cargando}</p>}>
+      <Viaje {...props} />
+    </SoloCliente>
+  );
+}
+
+/** El viaje guardado en el celular, si sigue vigente; si no, el que está en curso en el servidor. */
+function viajeInicial(enCurso: EstadoViaje | null): { viaje: EstadoViaje | null; localViejo: boolean } {
+  const local = leerBorrador<EstadoViaje>(CLAVE_VIAJE)?.datos ?? null;
+  const iniciaPendiente = local !== null && pendientes().some((op) => op.tipo === "iniciar_viaje" && op.id === local.id);
+  if (local && (iniciaPendiente || local.id === enCurso?.id)) return { viaje: local, localViejo: false };
+  // Si el del celular ya no está en curso, se recibió en otro dispositivo.
+  return { viaje: enCurso, localViejo: local !== null };
+}
+
+function Viaje({ datos, enCurso, sugerida, puedeCrearProducto, puedeCrearLugar }: Props) {
+  const [inicio] = useState(() => viajeInicial(enCurso));
+  const [viaje, setViaje] = useState<EstadoViaje | null>(inicio.viaje);
   const [vista, setVista] = useState<"lista" | "comprar" | "gasto">("lista");
   const [conLista, setConLista] = useState(sugerida.length > 0);
   const cola = usePendientes();
-  const datos = datosServidor;
 
-  const enviarAhora = useCallback(async () => {
-    if (!navigator.onLine) return;
+  const enviarAhora = useCallback(async (forzar = false) => {
+    if (!forzar && !navigator.onLine) return;
     const r = await enviarPendientes(enviar);
     if (r.enviados) toast.success(`${r.enviados} enviado(s).`);
   }, []);
 
-  // Al abrir: guarda los productos en el celular y recupera el viaje.
+  // Al abrir: limpia el viaje viejo y envía lo pendiente (y otra vez cuando vuelva la señal).
   useEffect(() => {
-    guardarBorrador(CLAVE_DATOS, datosServidor);
-    const local = leerBorrador<EstadoViaje>(CLAVE_VIAJE)?.datos ?? null;
-    const iniciaPendiente = local && pendientes().some((op) => op.tipo === "iniciar_viaje" && op.id === local.id);
-    if (local && (iniciaPendiente || local.id === enCurso?.id)) setViaje(local);
-    else if (enCurso) setViaje(enCurso);
-    else if (local) borrarBorrador(CLAVE_VIAJE); // ya se recibió en otro dispositivo
-    setCargado(true);
+    if (inicio.localViejo) borrarBorrador(CLAVE_VIAJE);
     void enviarAhora();
     const alVolver = () => void enviarAhora();
     window.addEventListener("online", alVolver);
-    const reloj = window.setInterval(alVolver, 20_000);
+    const reloj = window.setInterval(alVolver, 10_000);
     return () => {
       window.removeEventListener("online", alVolver);
       window.clearInterval(reloj);
     };
-  }, [datosServidor, enCurso, enviarAhora]);
+  }, [inicio, enviarAhora]);
 
   function actualizar(cambio: (v: EstadoViaje) => EstadoViaje) {
     setViaje((v) => {
@@ -159,7 +160,6 @@ export function PantallaViaje({
     void enviarAhora();
   }
 
-  if (!cargado) return <p className="text-lg">{textos.general.cargando}</p>;
 
   if (!viaje) {
     return (
@@ -197,7 +197,7 @@ export function PantallaViaje({
                 </Button>
               </span>
             ))}
-            <Button size="sm" variant="outline" className="justify-self-start" onClick={() => void enviarAhora()}>
+            <Button size="sm" variant="outline" className="justify-self-start" onClick={() => void enviarAhora(true)}>
               {t.reintentar}
             </Button>
           </div>

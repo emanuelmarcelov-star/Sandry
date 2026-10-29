@@ -8,8 +8,9 @@ import { AjusteStock } from "./ajuste-stock";
 function horaEcuador(fecha: string) {
   return new Intl.DateTimeFormat("es-EC", { timeZone: ZONA_HORARIA, hour: "2-digit", minute: "2-digit" }).format(new Date(fecha));
 }
-import { textosCatalogo } from "@/lib/textos";
+import { textosCatalogo, textosInventario } from "@/lib/textos";
 import { puede, requerirPermiso } from "@/server/sesion";
+import { AnotarLote } from "./anotar-lote";
 import { categoriasEnArbol, listarCategorias, obtenerProducto, valoresEfectivos } from "@/server/catalogo";
 import { FormularioProducto, type ValoresIniciales } from "./formulario-producto";
 
@@ -101,6 +102,14 @@ export async function PaginaProducto({ id }: { id?: string }) {
     });
   }
 
+  // Comparador: último precio pagado en cada lugar. Y las fechas de caducidad vigentes.
+  const [{ data: lugares }, { data: lotes }] = producto
+    ? await Promise.all([
+        verCostos ? supabase.rpc("precios_por_lugar", { p_producto: producto.id }) : Promise.resolve({ data: [] }),
+        supabase.from("lotes").select("id, vence, cantidad").eq("producto_id", producto.id).gt("cantidad", 0).order("vence"),
+      ])
+    : [{ data: [] }, { data: [] }];
+
   return (
     <div className="grid gap-8">
       <h1 className="text-3xl font-bold">{producto ? t.tituloEditar : t.tituloNuevo}</h1>
@@ -119,6 +128,42 @@ export async function PaginaProducto({ id }: { id?: string }) {
           puedeAjustar={puede(yo, "inventario.ajustar")}
           movimientos={movimientos}
         />
+      )}
+      {producto && (!!lugares?.length || !!lotes?.length || puede(yo, "inventario.ajustar")) && (
+        <section className="grid max-w-3xl gap-4 rounded-xl border p-4">
+          {!!lugares?.length && (
+            <div className="grid gap-1">
+              <h2 className="text-xl font-semibold">{t.preciosPorLugar}</h2>
+              <ul className="grid gap-1">
+                {lugares.map((l, i) => (
+                  <li key={l.proveedor_id ?? i} className="flex flex-wrap justify-between gap-2">
+                    <span>
+                      {l.lugar}
+                      {i === 0 && lugares.length > 1 && <strong className="ml-2 text-green-700 dark:text-green-400">{t.masBarato}</strong>}
+                    </span>
+                    <span>
+                      {formatoDolares(String(l.costo))} <span className="text-sm text-muted-foreground">· {formatoFecha(l.fecha)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {!!lotes?.length && (
+            <div className="grid gap-1">
+              <h2 className="text-xl font-semibold">{textosInventario.lote.lotes}</h2>
+              <ul className="grid gap-1">
+                {lotes.map((l) => (
+                  <li key={l.id} className="flex justify-between gap-2">
+                    <span>{formatoFecha(`${l.vence}T12:00:00`)}</span>
+                    <span>{cantidadConUnidad(String(l.cantidad), producto.unidadBase)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {puede(yo, "inventario.ajustar") && <AnotarLote productoId={producto.id} />}
+        </section>
       )}
       <FormularioProducto
         valores={valores}
