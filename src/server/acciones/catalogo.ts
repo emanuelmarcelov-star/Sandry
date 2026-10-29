@@ -381,10 +381,11 @@ export async function confirmarImportacion(entrada: {
   const { data, error } = await supabase.rpc("importar_productos", { p_productos: productos as unknown as Json });
   if (error) return { ok: false, mensaje: mensajeError(error, "No se pudo importar.") };
   revalidatePath("/catalogo", "layout");
-  const r = data as { creados: number; actualizados: number };
+  const r = data as { creados: number; actualizados: number; stock_corregido?: number };
+  const corregidos = r.stock_corregido ? ` Se corrigió el stock de ${r.stock_corregido}.` : "";
   return {
     ok: true,
     datos: { nuevos: r.creados, actualizados: r.actualizados },
-    mensaje: `Listo: ${r.creados} producto(s) nuevo(s) y ${r.actualizados} actualizado(s).`,
+    mensaje: `Listo: ${r.creados} producto(s) nuevo(s) y ${r.actualizados} actualizado(s).${corregidos}`,
   };
 }

@@ -428,6 +428,7 @@ export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesAr
 
     let costoUnitario: string | null = null;
     let stockTotal = dec(0);
+    let dijoStock = false;
     let categoriaId = actual?.categoriaId ?? null;
     let plu = actual?.plu ?? null;
     let stockMinimo = actual?.stockMinimo ?? "0";
@@ -460,7 +461,10 @@ export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesAr
         // Costo por unidad base: costo de la presentación ÷ factor (jaba $9 ÷ 12 = $0.75).
         costoUnitario = dec(d.precioCompra).dividedBy(p.factor).toDecimalPlaces(4).toString();
       }
-      if (d.stock !== null) stockTotal = stockTotal.plus(dec(d.stock).times(p.factor));
+      if (d.stock !== null) {
+        stockTotal = stockTotal.plus(dec(d.stock).times(p.factor));
+        dijoStock = true;
+      }
       if (d.categoria) categoriaId = opciones.categoriaId(d.categoria, d.subcategoria) ?? categoriaId;
       if (d.plu) plu = d.plu;
       if (d.stockMinimo !== null) stockMinimo = d.stockMinimo;
@@ -494,8 +498,67 @@ export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesAr
       activo: actual?.activo ?? true,
       presentaciones: presentaciones.map((p, i) => ({ ...p, orden: i })),
       costo_unitario: costoUnitario,
-      stock_inicial: stockTotal.gt(0) ? stockTotal.toDecimalPlaces(3).toString() : null,
+      // Nuevo: «Cuántos tengo» es el stock inicial. Existente: es el stock REAL
+      // (si cambió se corrige como conteo; así descargar → editar → importar no duplica).
+      ...(actual
+        ? { stock_real: dijoStock ? stockTotal.toDecimalPlaces(3).toString() : null }
+        : { stock_inicial: stockTotal.gt(0) ? stockTotal.toDecimalPlaces(3).toString() : null }),
     });
   }
   return { productos, nuevos, actualizados };
+}
+
+// ------------------------------------------------------------------ exportar
+
+/** Lo mínimo de un producto para sacarlo a Excel. */
+export type ProductoParaExportar = {
+  nombre: string;
+  marca: string;
+  categoriaId: string | null;
+  plu: string | null;
+  unidadBase: UnidadBase;
+  stockMinimo: string;
+  stock: string;
+  costo: string | null; // por unidad base; null si no hay permiso
+  presentaciones: { nombre: string; factor: string; precioVenta: string | null; esBase: boolean; codigos: string[] }[];
+};
+
+const numeroExcel = (v: string | null | undefined) => (v === null || v === undefined || v === "" ? "" : Number(v));
+
+/**
+ * Filas para «Descargar mis productos», en el MISMO formato de la plantilla:
+ * una fila por presentación. El stock va solo en la fila de la unidad base (en
+ * unidades base) para que al volver a importar no se cuente dos veces.
+ */
+export function filasParaExportar(
+  productos: ProductoParaExportar[],
+  categorias: CategoriaContexto[],
+): Partial<Record<ClaveColumna, string | number>>[] {
+  const porId = new Map(categorias.map((c) => [c.id, c]));
+  return productos.flatMap((p) => {
+    const cat = p.categoriaId ? porId.get(p.categoriaId) : undefined;
+    const madre = cat?.padreId ? porId.get(cat.padreId) : undefined;
+    const comunes = {
+      categoria: madre?.nombre ?? cat?.nombre ?? "",
+      subcategoria: madre ? cat!.nombre : "",
+      nombre: p.nombre,
+      marca: p.marca,
+      plu: p.plu ?? "",
+      unidadBase: p.unidadBase === "unidad" ? "" : p.unidadBase,
+    };
+    const nombreBase = UNIDADES[p.unidadBase].presentacionBase;
+    return p.presentaciones.map((x) => {
+      const costo = p.costo !== null && Number(p.costo) > 0 ? dec(p.costo).times(x.factor).toDecimalPlaces(4).toString() : null;
+      return {
+        ...comunes,
+        presentacion: x.esBase && normalizarTexto(x.nombre) === normalizarTexto(nombreBase) ? "" : x.nombre,
+        factor: x.esBase ? "" : numeroExcel(x.factor),
+        precioCompra: numeroExcel(costo),
+        precioVenta: numeroExcel(x.precioVenta),
+        stockInicial: x.esBase ? numeroExcel(p.stock) : "",
+        stockMinimo: x.esBase && Number(p.stockMinimo) > 0 ? numeroExcel(p.stockMinimo) : "",
+        codigoBarras: x.codigos[0] ?? "",
+      };
+    });
+  });
 }

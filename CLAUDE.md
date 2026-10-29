@@ -129,6 +129,10 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
   `productos.compra_con_iva` y `ajustes.iva_compras` (por si algún día se factura, fase 7).
 - 29/10/2026 — **Sumar stock no pide costo**: usa el costo que ya tiene el producto
   (`ajustar_stock` toma `costo_promedio` si no llega costo). Aplicar lo mismo en compras rápidas.
+- 29/10/2026 — **Descargar mis productos** (`/catalogo/exportar`): mismo formato que la
+  plantilla, para editar y volver a importar. Al importar, para productos EXISTENTES
+  «Cuántos tengo» es el stock REAL (`stock_real` → conteo si cambió); para nuevos es el
+  stock inicial. Así la ida y vuelta no duplica stock.
 - 29/10/2026 — **Excel sencillo**: columnas en orden Categoría, Producto, Costo, Precio de
   venta, Cuántos tengo (verdes) y luego lo opcional (gris). Se aceptan títulos de plantillas
   anteriores (`otros` en `COLUMNAS_PRODUCTOS`).

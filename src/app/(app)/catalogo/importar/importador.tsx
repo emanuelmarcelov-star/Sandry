@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CircleAlert, CircleCheck, Download, Upload } from "lucide-react";
+import { CircleAlert, CircleCheck, Download, FileSpreadsheet, Upload } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Aviso, Casilla } from "@/components/formulario";
@@ -79,9 +79,15 @@ export function Importador() {
         <h2 className="text-xl font-semibold">{t.paso1}</h2>
         <p className="text-muted-foreground">{t.paso1Ayuda}</p>
         {/* Enlace normal (no <Link>): es la descarga de un archivo que arma el servidor. */}
-        <a href="/catalogo/importar/plantilla" download className={cn(buttonVariants({ variant: "outline" }), "justify-self-start")}>
-          <Download className="size-5" aria-hidden /> {t.descargar}
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a href="/catalogo/importar/plantilla" download className={buttonVariants({ variant: "outline" })}>
+            <Download className="size-5" aria-hidden /> {t.descargar}
+          </a>
+          <a href="/catalogo/exportar" download className={buttonVariants({ variant: "outline" })}>
+            <FileSpreadsheet className="size-5" aria-hidden /> {t.descargarMisProductos}
+          </a>
+        </div>
+        <p className="text-muted-foreground">{t.ayudaMisProductos}</p>
       </section>
 
       <section className="grid gap-2">

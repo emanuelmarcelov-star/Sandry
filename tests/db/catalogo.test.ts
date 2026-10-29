@@ -336,3 +336,34 @@ describe("ajustar stock desde la ficha", () => {
     expect((await cajera.rpc("ajustar_stock", { p_producto: idCola, p_tipo: "conteo", p_cantidad: 5 })).error?.code).toBe("42501");
   });
 });
+
+describe("importar con stock real (productos existentes)", () => {
+  async function stock() {
+    return n((await duena.from("existencias").select("cantidad").eq("producto_id", idCola).single()).data?.cantidad);
+  }
+  async function movimientos() {
+    return (await duena.from("movimientos_stock").select("id", { count: "exact", head: true }).eq("producto_id", idCola)).count;
+  }
+  async function payload(stockReal: number | null) {
+    const { data: pres } = await duena.from("presentaciones").select("id, nombre, factor, precio_venta, es_base").eq("producto_id", idCola).eq("activa", true);
+    return { ...cocaCola({ id: idCola, stock_inicial: null, costo_unitario: null }), presentaciones: pres!.map((p) => ({ ...p, codigos: [] })), stock_real: stockReal };
+  }
+
+  test("si el stock es el mismo, no se mueve nada", async () => {
+    const antes = await movimientos();
+    const actual = await stock();
+    const { data, error } = await duena.rpc("importar_productos", { p_productos: [await payload(actual)] });
+    expect(error).toBeNull();
+    expect(data).toMatchObject({ actualizados: 1, stock_corregido: 0 });
+    expect(await stock()).toBe(actual);
+    expect(await movimientos()).toBe(antes);
+  });
+
+  test("si cambió, se corrige como conteo (no se suma)", async () => {
+    const { data } = await duena.rpc("importar_productos", { p_productos: [await payload(50)] });
+    expect(data).toMatchObject({ stock_corregido: 1 });
+    expect(await stock()).toBe(50);
+    const { data: ultimo } = await duena.from("movimientos_stock").select("tipo, nota").eq("producto_id", idCola).order("id", { ascending: false }).limit(1).single();
+    expect(ultimo).toEqual({ tipo: "conteo", nota: "Corregido desde Excel" });
+  });
+});

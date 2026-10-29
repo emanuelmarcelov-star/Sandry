@@ -326,9 +326,13 @@ export const textosCatalogo = {
   },
   importar: {
     titulo: "Importar productos desde Excel",
-    paso1: "1. Descarga la plantilla",
-    paso1Ayuda: "Tiene listas para elegir (categoría, unidad, IVA) y ejemplos. Llénala en Excel o Google Sheets.",
-    descargar: "Descargar plantilla",
+    paso1: "1. Descarga el Excel",
+    paso1Ayuda: "La plantilla vacía tiene listas para elegir y una hoja de ejemplos. Llénala en Excel o Google Sheets.",
+    descargar: "Descargar plantilla vacía",
+    descargarMisProductos: "Descargar mis productos",
+    descargarExcel: "Descargar Excel",
+    ayudaMisProductos:
+      "«Descargar mis productos» trae todo tu catálogo en este mismo formato: puedes cambiar costos, precios o cuántos tienes, agregar filas nuevas al final y volver a subirlo. Lo que ya existe se actualiza; no se duplica.",
     paso2: "2. Sube el archivo lleno",
     elegir: "Elegir archivo .xlsx",
     leyendo: "Leyendo…",

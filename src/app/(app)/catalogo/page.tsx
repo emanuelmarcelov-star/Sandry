@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ImageOff, Plus } from "lucide-react";
+import { FileSpreadsheet, ImageOff, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { formatoDolares } from "@/lib/dinero";
@@ -36,9 +36,15 @@ async function Contenido({ searchParams }: { searchParams: PageProps<"/catalogo"
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold">{t.titulo}</h1>
         {editar && (
-          <Link href="/catalogo/nuevo" className={buttonVariants()}>
-            <Plus className="size-5" aria-hidden /> {t.nuevo}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {/* Enlace normal (no <Link>): es la descarga de un archivo. */}
+            <a href="/catalogo/exportar" download className={buttonVariants({ variant: "outline" })}>
+              <FileSpreadsheet className="size-5" aria-hidden /> {textosCatalogo.importar.descargarExcel}
+            </a>
+            <Link href="/catalogo/nuevo" className={buttonVariants()}>
+              <Plus className="size-5" aria-hidden /> {t.nuevo}
+            </Link>
+          </div>
         )}
       </div>
 

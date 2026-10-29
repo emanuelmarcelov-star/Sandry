@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   armarImportacion,
+  filasParaExportar,
   COLUMNAS_PRODUCTOS,
   mapearEncabezados,
   normalizarTexto,
@@ -227,7 +228,8 @@ describe("armar lo que se guarda", () => {
     const { productos, actualizados } = armarImportacion(filas, { ...opciones, actuales: new Map([["p1", actual]]) });
     expect(actualizados).toBe(1);
     const p = productos[0];
-    expect(p).toMatchObject({ id: "p1", sinonimos: ["colita"], foto_ruta: "x.jpg", retornable: true, ubicacion: "Refri", stock_inicial: "6" });
+    expect(p).toMatchObject({ id: "p1", sinonimos: ["colita"], foto_ruta: "x.jpg", retornable: true, ubicacion: "Refri", stock_real: "6" });
+    expect(p.stock_inicial).toBeUndefined();
     const pres = p.presentaciones as { id?: string; precio_venta: string | null; codigos: string[] }[];
     expect(pres.map((x) => [x.id, x.precio_venta, x.codigos])).toEqual([
       ["u", "1.05", ["7861001234565"]],
@@ -246,5 +248,69 @@ describe("armar lo que se guarda", () => {
   test("las filas con errores no se guardan", () => {
     const { filas } = revisarFilas([fila({ nombre: "Malo", precioVenta: "abc" })], contexto);
     expect(armarImportacion(filas, opciones).productos).toEqual([]);
+  });
+});
+
+describe("descargar mis productos (y volver a importar)", () => {
+  const categorias = [
+    { id: "beb", nombre: "Bebidas", padreId: null },
+    { id: "gas", nombre: "Gaseosas", padreId: "beb" },
+  ];
+  const coca = {
+    nombre: "Coca-Cola 500 ml",
+    marca: "Coca-Cola",
+    categoriaId: "gas",
+    plu: null,
+    unidadBase: "unidad" as const,
+    stockMinimo: "12",
+    stock: "30",
+    costo: "0.75",
+    presentaciones: [
+      { nombre: "Unidad", factor: "1", precioVenta: "1", esBase: true, codigos: ["7861001234565"] },
+      { nombre: "Jaba x12", factor: "12", precioVenta: "10.8", esBase: false, codigos: [] },
+    ],
+  };
+
+  test("una fila por presentación; el stock solo en la unidad", () => {
+    const filas = filasParaExportar([coca], categorias);
+    expect(filas).toEqual([
+      expect.objectContaining({ categoria: "Bebidas", subcategoria: "Gaseosas", nombre: "Coca-Cola 500 ml", presentacion: "", precioCompra: 0.75, precioVenta: 1, stockInicial: 30, stockMinimo: 12, codigoBarras: "7861001234565" }),
+      expect.objectContaining({ presentacion: "Jaba x12", factor: 12, precioCompra: 9, precioVenta: 10.8, stockInicial: "" }),
+    ]);
+  });
+
+  test("sin permiso de costos, la columna Costo sale vacía", () => {
+    const [fila] = filasParaExportar([{ ...coca, costo: null }], categorias);
+    expect(fila.precioCompra).toBe("");
+  });
+
+  test("ida y vuelta sin cambios: actualiza el mismo producto y el stock queda igual", () => {
+    const exportadas = filasParaExportar([coca], categorias);
+    const comoTexto = exportadas.map((e, i) => {
+      const f = fila({});
+      for (const c of COLUMNAS_PRODUCTOS) (f as Record<string, unknown>)[c.clave] = String(e[c.clave] ?? "");
+      return { ...f, fila: i + 2 };
+    });
+    const actual = {
+      id: "p1", nombre: coca.nombre, marca: coca.marca, categoriaId: "gas", plu: null, sinonimos: [], fotoRuta: null,
+      unidadBase: "unidad" as const, tarifaIva: "15" as const, stockMinimo: "12", manejaCaducidad: false, retornable: false,
+      soloMayores: false, ubicacion: "", activo: true,
+      presentaciones: [
+        { id: "u", nombre: "Unidad", factor: "1", precioVenta: "1", paraVenta: true, paraCompra: true, esBase: true, codigos: ["7861001234565"] },
+        { id: "j", nombre: "Jaba x12", factor: "12", precioVenta: "10.8", paraVenta: true, paraCompra: true, esBase: false, codigos: [] },
+      ],
+    };
+    const ctx = { ...contexto, categorias, productos: [{ id: "p1", nombre: coca.nombre, marca: coca.marca, plu: null, codigos: ["7861001234565"] }] };
+    const { filas } = revisarFilas(comoTexto, ctx);
+    expect(filas.every((f) => f.errores.length === 0)).toBe(true);
+    const { productos, nuevos, actualizados } = armarImportacion(filas, {
+      unirParecidos: new Set(),
+      actuales: new Map([["p1", actual]]),
+      categoriaId: () => "gas",
+      ivaDeCategoria: () => "15",
+    });
+    expect([nuevos, actualizados]).toEqual([0, 1]);
+    expect(productos[0]).toMatchObject({ id: "p1", stock_real: "30", costo_unitario: "0.75", stock_minimo: "12" });
+    expect((productos[0].presentaciones as { id: string }[]).map((p) => p.id)).toEqual(["u", "j"]);
   });
 });

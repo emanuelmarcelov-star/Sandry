@@ -88,6 +88,23 @@ Cuando todo te funcione, dime **«fase 3 aprobada»** y seguimos con la fase 4
 (abastecimiento e inventario: proveedores, cuentas de dinero, compras, viaje de
 compras desde el celular, kardex y alertas).
 
+## Excel: sacar todo y cargar muchos a la vez
+
+**Sacar todos los productos a Excel**: Catálogo → **Descargar Excel** (o en Importar Excel →
+**Descargar mis productos**). Sale un archivo con todo el catálogo, en el mismo formato de
+la plantilla.
+
+**Cambiar o agregar muchos a la vez**:
+1. Descarga tus productos (lo de arriba).
+2. En el Excel cambia lo que quieras: costos, precios, «Cuántos tengo». Para productos
+   nuevos, agrega filas al final (basta con Categoría, Producto, Costo, Precio de venta y
+   Cuántos tengo).
+3. Guarda y súbelo en **Importar Excel**. Revisa la vista previa y toca **Guardar**.
+4. Lo que ya existía **se actualiza** (no se duplica) y lo nuevo se crea.
+   - En productos que ya existen, **«Cuántos tengo» es lo que hay de verdad**: si lo
+     cambiaste, se registra como corrección de conteo; si lo dejaste igual, no pasa nada.
+   - En productos nuevos, es el stock con el que empiezan.
+
 ## Notas
 
 - **IVA**: no se usa en ninguna pantalla. Internamente queda un valor oculto por si algún

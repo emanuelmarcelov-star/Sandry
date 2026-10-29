@@ -39,8 +39,14 @@ function lista(hoja: ExcelJS.Worksheet, columna: string, rango: string, mensaje:
   );
 }
 
-/** Plantilla para cargar productos, compras y gastos desde Excel. */
-export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
+export type FilaExcel = Partial<Record<(typeof COLUMNAS_PRODUCTOS)[number]["clave"], string | number>>;
+
+/**
+ * Plantilla para cargar productos, compras y gastos desde Excel.
+ * Con `filas`, la hoja «Productos» sale llena (para «Descargar mis productos»):
+ * se puede editar y volver a importar con el mismo formato.
+ */
+export async function crearPlantilla(categorias: Categoria[], filas: FilaExcel[] = []): Promise<Buffer> {
   const libro = new ExcelJS.Workbook();
   libro.creator = "Sandry";
   libro.created = new Date();
@@ -111,12 +117,12 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
   const prod = libro.addWorksheet("Productos");
   encabezado(prod, columnas);
   pintarOpcionales(prod);
+  for (const fila of filas) prod.addRow(COLUMNAS_PRODUCTOS.map((c) => fila[c.clave] ?? ""));
   const ejemplosHoja = libro.addWorksheet("Ejemplos", { properties: { tabColor: { argb: "FFB45309" } } });
   encabezado(ejemplosHoja, columnas);
   pintarOpcionales(ejemplosHoja);
 
-  type Ejemplo = Partial<Record<(typeof COLUMNAS_PRODUCTOS)[number]["clave"], string | number>>;
-  const ejemplos: Ejemplo[] = [
+  const ejemplos: FilaExcel[] = [
     { categoria: "Bebidas", nombre: "Coca-Cola 3 litros", precioCompra: 2.6, precioVenta: 3.5, stockInicial: 12, stockMinimo: 4 },
     { categoria: "Bebidas", nombre: "Coca-Cola 500 ml", precioCompra: 0.75, precioVenta: 1, stockInicial: 24, stockMinimo: 12, marca: "Coca-Cola" },
     { categoria: "Bebidas", nombre: "Coca-Cola 500 ml", precioCompra: 9, precioVenta: 10.8, marca: "Coca-Cola", presentacion: "Jaba x12", factor: 12 },

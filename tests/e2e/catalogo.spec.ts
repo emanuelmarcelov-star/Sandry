@@ -160,6 +160,55 @@ test("hoja de códigos: genera códigos internos para lo que no tiene", async ({
   for (const c of await codigos.all()) expect(await c.getAttribute("data-codigo")).toMatch(/^29\d{11}$/);
 });
 
+test("descargar mis productos, editarlos en Excel y volver a importarlos sin duplicar", async ({ page }) => {
+  await page.goto("/catalogo");
+  const descarga = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Descargar Excel" }).click();
+  const archivo = await descarga;
+  expect(archivo.suggestedFilename()).toMatch(/^productos-sandry-\d{2}-\d{2}-\d{4}\.xlsx$/);
+
+  const libro = new ExcelJS.Workbook();
+  await libro.xlsx.readFile(await archivo.path());
+  const hoja = libro.getWorksheet("Productos")!;
+  const titulos = (hoja.getRow(1).values as unknown[]).slice(1);
+  expect(titulos.slice(0, 5)).toEqual(["Categoría", "Producto", "Costo", "Precio de venta", "Cuántos tengo"]);
+  const col = (titulo: string) => titulos.indexOf(titulo) + 1;
+
+  // Busca la fila del pan y le cambia el precio y el stock real.
+  let filaPan = 0;
+  hoja.eachRow((fila, n) => {
+    if (fila.getCell(col("Producto")).value === "Pan de sal") filaPan = n;
+  });
+  expect(filaPan).toBeGreaterThan(1);
+  expect(hoja.getRow(filaPan).getCell(col("Cuántos tengo")).value).toBe(40);
+  hoja.getRow(filaPan).getCell(col("Precio de venta")).value = 0.2;
+  hoja.getRow(filaPan).getCell(col("Cuántos tengo")).value = 35;
+  // Y agrega un producto nuevo al final.
+  hoja.addRow(["Víveres", "Arroz Gustadina 1 lb", 0.5, 0.65, 20]);
+  const editado = Buffer.from(await libro.xlsx.writeBuffer());
+
+  await page.goto("/catalogo");
+  const antes = await page.getByRole("listitem").count();
+
+  await page.goto("/catalogo/importar");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "productos.xlsx",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: editado,
+  });
+  await expect(page.getByText(/con errores/)).toHaveCount(0);
+  await page.getByRole("button", { name: /Guardar en el catálogo/ }).click();
+  await expect(page.getByText(/Listo: 1 producto\(s\) nuevo\(s\) y \d+ actualizado\(s\)\. Se corrigió el stock de 1\./)).toBeVisible();
+
+  await page.goto("/catalogo");
+  await expect(page.getByRole("listitem")).toHaveCount(antes + 1); // nada duplicado, solo el arroz
+  const pan = page.getByRole("listitem").filter({ hasText: "Pan de sal" });
+  await expect(pan).toContainText("$0.20");
+  await expect(pan).toContainText("35 unidades");
+  // La Coca-Cola mantiene su stock (no se sumó otra vez).
+  await expect(page.getByRole("listitem").filter({ hasText: "Coca-Cola 500 ml" })).toContainText("44 unidades");
+});
+
 test("categorías: crear una subcategoría", async ({ page }) => {
   await page.goto("/catalogo/categorias");
   await page.getByRole("listitem").filter({ hasText: /^Bebidas/ }).getByRole("button", { name: "Agregar subcategoría" }).click();
