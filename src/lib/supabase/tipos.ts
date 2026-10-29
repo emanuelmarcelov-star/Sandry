@@ -46,6 +46,7 @@ export type Database = {
           id: number
           minutos_inactividad: number
           nombre_tienda: string
+          redondeo_precio: number
         }
         Insert: {
           actualizado_en?: string
@@ -53,6 +54,7 @@ export type Database = {
           id?: number
           minutos_inactividad?: number
           nombre_tienda?: string
+          redondeo_precio?: number
         }
         Update: {
           actualizado_en?: string
@@ -60,6 +62,7 @@ export type Database = {
           id?: number
           minutos_inactividad?: number
           nombre_tienda?: string
+          redondeo_precio?: number
         }
         Relationships: []
       }
@@ -101,6 +104,92 @@ export type Database = {
           },
         ]
       }
+      categorias: {
+        Row: {
+          activa: boolean
+          color: string
+          creado_en: string
+          icono: string | null
+          id: string
+          margen_objetivo: number | null
+          nombre: string
+          orden: number
+          padre_id: string | null
+          tarifa_iva: string | null
+        }
+        Insert: {
+          activa?: boolean
+          color?: string
+          creado_en?: string
+          icono?: string | null
+          id?: string
+          margen_objetivo?: number | null
+          nombre: string
+          orden?: number
+          padre_id?: string | null
+          tarifa_iva?: string | null
+        }
+        Update: {
+          activa?: boolean
+          color?: string
+          creado_en?: string
+          icono?: string | null
+          id?: string
+          margen_objetivo?: number | null
+          nombre?: string
+          orden?: number
+          padre_id?: string | null
+          tarifa_iva?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorias_padre_id_fkey"
+            columns: ["padre_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      codigos_barras: {
+        Row: {
+          codigo: string
+          creado_en: string
+          es_interno: boolean
+          presentacion_id: string | null
+          producto_id: string
+        }
+        Insert: {
+          codigo: string
+          creado_en?: string
+          es_interno?: boolean
+          presentacion_id?: string | null
+          producto_id: string
+        }
+        Update: {
+          codigo?: string
+          creado_en?: string
+          es_interno?: boolean
+          presentacion_id?: string | null
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "codigos_barras_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "codigos_barras_producto_id_presentacion_id_fkey"
+            columns: ["producto_id", "presentacion_id"]
+            isOneToOne: false
+            referencedRelation: "presentaciones"
+            referencedColumns: ["producto_id", "id"]
+          },
+        ]
+      }
       dispositivo_usuarios: {
         Row: {
           dispositivo_id: string
@@ -127,6 +216,123 @@ export type Database = {
           },
         ]
       }
+      etiquetas_pendientes: {
+        Row: {
+          desde: string
+          presentacion_id: string
+          producto_id: string
+        }
+        Insert: {
+          desde?: string
+          presentacion_id: string
+          producto_id: string
+        }
+        Update: {
+          desde?: string
+          presentacion_id?: string
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etiquetas_pendientes_presentacion_id_fkey"
+            columns: ["presentacion_id"]
+            isOneToOne: true
+            referencedRelation: "presentaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "etiquetas_pendientes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      existencias: {
+        Row: {
+          actualizado_en: string
+          cantidad: number
+          producto_id: string
+        }
+        Insert: {
+          actualizado_en?: string
+          cantidad?: number
+          producto_id: string
+        }
+        Update: {
+          actualizado_en?: string
+          cantidad?: number
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "existencias_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: true
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      historial_precios: {
+        Row: {
+          antes: number | null
+          despues: number | null
+          fecha: string
+          id: number
+          origen: string
+          presentacion_id: string | null
+          producto_id: string
+          tipo: string
+          usuario_id: string | null
+        }
+        Insert: {
+          antes?: number | null
+          despues?: number | null
+          fecha?: string
+          id?: never
+          origen?: string
+          presentacion_id?: string | null
+          producto_id: string
+          tipo: string
+          usuario_id?: string | null
+        }
+        Update: {
+          antes?: number | null
+          despues?: number | null
+          fecha?: string
+          id?: never
+          origen?: string
+          presentacion_id?: string | null
+          producto_id?: string
+          tipo?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historial_precios_presentacion_id_fkey"
+            columns: ["presentacion_id"]
+            isOneToOne: false
+            referencedRelation: "presentaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historial_precios_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historial_precios_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intentos_recuperar_correo: {
         Row: {
           clave: string
@@ -144,6 +350,63 @@ export type Database = {
           id?: never
         }
         Relationships: []
+      }
+      movimientos_stock: {
+        Row: {
+          cantidad: number
+          costo_unitario: number | null
+          fecha: string
+          id: number
+          nota: string
+          producto_id: string
+          referencia_id: string | null
+          referencia_tipo: string | null
+          saldo: number
+          tipo: string
+          usuario_id: string | null
+        }
+        Insert: {
+          cantidad: number
+          costo_unitario?: number | null
+          fecha?: string
+          id?: never
+          nota?: string
+          producto_id: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          saldo: number
+          tipo: string
+          usuario_id?: string | null
+        }
+        Update: {
+          cantidad?: number
+          costo_unitario?: number | null
+          fecha?: string
+          id?: never
+          nota?: string
+          producto_id?: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          saldo?: number
+          tipo?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_stock_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_stock_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       perfiles: {
         Row: {
@@ -255,6 +518,156 @@ export type Database = {
           },
         ]
       }
+      presentaciones: {
+        Row: {
+          activa: boolean
+          es_base: boolean
+          factor: number
+          id: string
+          nombre: string
+          orden: number
+          para_compra: boolean
+          para_venta: boolean
+          precio_venta: number | null
+          producto_id: string
+        }
+        Insert: {
+          activa?: boolean
+          es_base?: boolean
+          factor: number
+          id?: string
+          nombre: string
+          orden?: number
+          para_compra?: boolean
+          para_venta?: boolean
+          precio_venta?: number | null
+          producto_id: string
+        }
+        Update: {
+          activa?: boolean
+          es_base?: boolean
+          factor?: number
+          id?: string
+          nombre?: string
+          orden?: number
+          para_compra?: boolean
+          para_venta?: boolean
+          precio_venta?: number | null
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentaciones_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      producto_costos: {
+        Row: {
+          actualizado_en: string
+          costo_promedio: number
+          producto_id: string
+          ultimo_costo: number | null
+        }
+        Insert: {
+          actualizado_en?: string
+          costo_promedio?: number
+          producto_id: string
+          ultimo_costo?: number | null
+        }
+        Update: {
+          actualizado_en?: string
+          costo_promedio?: number
+          producto_id?: string
+          ultimo_costo?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producto_costos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: true
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      productos: {
+        Row: {
+          activo: boolean
+          actualizado_en: string
+          categoria_id: string | null
+          creado_en: string
+          foto_ruta: string | null
+          id: string
+          maneja_caducidad: boolean
+          marca: string
+          nombre: string
+          pendiente: boolean
+          plu: string | null
+          retornable: boolean
+          sinonimos: string[]
+          solo_mayores: boolean
+          stock_minimo: number
+          tarifa_iva: string
+          texto_busqueda: string
+          ubicacion: string
+          unidad_base: string
+        }
+        Insert: {
+          activo?: boolean
+          actualizado_en?: string
+          categoria_id?: string | null
+          creado_en?: string
+          foto_ruta?: string | null
+          id?: string
+          maneja_caducidad?: boolean
+          marca?: string
+          nombre: string
+          pendiente?: boolean
+          plu?: string | null
+          retornable?: boolean
+          sinonimos?: string[]
+          solo_mayores?: boolean
+          stock_minimo?: number
+          tarifa_iva?: string
+          texto_busqueda?: string
+          ubicacion?: string
+          unidad_base?: string
+        }
+        Update: {
+          activo?: boolean
+          actualizado_en?: string
+          categoria_id?: string | null
+          creado_en?: string
+          foto_ruta?: string | null
+          id?: string
+          maneja_caducidad?: boolean
+          marca?: string
+          nombre?: string
+          pendiente?: boolean
+          plu?: string | null
+          retornable?: boolean
+          sinonimos?: string[]
+          solo_mayores?: boolean
+          stock_minimo?: number
+          tarifa_iva?: string
+          texto_busqueda?: string
+          ubicacion?: string
+          unidad_base?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "productos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rol_permisos: {
         Row: {
           permiso: string
@@ -315,7 +728,11 @@ export type Database = {
     }
     Functions: {
       actualizar_ajustes: {
-        Args: { p_descuento_max: number; p_minutos_inactividad: number }
+        Args: {
+          p_descuento_max: number
+          p_minutos_inactividad: number
+          p_redondeo_precio?: number
+        }
         Returns: undefined
       }
       actualizar_mi_perfil: {
@@ -336,6 +753,41 @@ export type Database = {
         Returns: undefined
       }
       buscar_correo_por_dato: { Args: { p_dato: string }; Returns: string }
+      buscar_productos: {
+        Args: {
+          p_categoria?: string
+          p_incluir_inactivos?: boolean
+          p_limite?: number
+          p_texto: string
+        }
+        Returns: {
+          activo: boolean
+          actualizado_en: string
+          categoria_id: string | null
+          creado_en: string
+          foto_ruta: string | null
+          id: string
+          maneja_caducidad: boolean
+          marca: string
+          nombre: string
+          pendiente: boolean
+          plu: string | null
+          retornable: boolean
+          sinonimos: string[]
+          solo_mayores: boolean
+          stock_minimo: number
+          tarifa_iva: string
+          texto_busqueda: string
+          ubicacion: string
+          unidad_base: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "productos"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       cambiar_estado_usuario: {
         Args: { p_activo: boolean; p_usuario: string }
         Returns: undefined
@@ -345,9 +797,26 @@ export type Database = {
         Returns: undefined
       }
       cantidad_administradoras_activas: { Args: never; Returns: number }
+      categoria_y_descendientes: {
+        Args: { p_categoria: string }
+        Returns: string[]
+      }
       definir_mi_pin: { Args: { p_pin: string }; Returns: undefined }
+      ean13_verificador: { Args: { p_doce: string }; Returns: number }
       exigir_permiso: { Args: { p_permiso: string }; Returns: undefined }
+      generar_codigo_interno: { Args: never; Returns: string }
+      guardar_categoria: { Args: { p: Json }; Returns: string }
+      guardar_producto: {
+        Args: { p: Json; p_origen?: string }
+        Returns: string
+      }
+      importar_productos: { Args: { p_productos: Json }; Returns: Json }
+      marcar_etiquetas_impresas: {
+        Args: { p_presentaciones: string[] }
+        Returns: undefined
+      }
       mis_permisos: { Args: never; Returns: string[] }
+      normalizar: { Args: { p_texto: string }; Returns: string }
       registrar_evento: {
         Args: {
           p_accion: string
@@ -358,10 +827,30 @@ export type Database = {
         }
         Returns: undefined
       }
+      registrar_movimiento: {
+        Args: {
+          p_cantidad: number
+          p_costo: number
+          p_nota?: string
+          p_producto: string
+          p_referencia_id?: string
+          p_referencia_tipo?: string
+          p_tipo: string
+        }
+        Returns: number
+      }
       resetear_pin: { Args: { p_usuario: string }; Returns: undefined }
+      siguiente_plu: { Args: never; Returns: string }
       tengo_pin: { Args: never; Returns: boolean }
       tiene_permiso: { Args: { p_permiso: string }; Returns: boolean }
       usuario_activo: { Args: never; Returns: boolean }
+      valores_categoria: {
+        Args: { p_categoria: string }
+        Returns: {
+          margen_objetivo: number
+          tarifa_iva: string
+        }[]
+      }
       verificar_pin: {
         Args: { p_pin: string; p_usuario: string }
         Returns: string

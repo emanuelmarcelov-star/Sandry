@@ -32,6 +32,22 @@ export function anonimo(): SupabaseClient<Database> {
 /** Borra TODAS las cuentas del proyecto de pruebas (y con ellas perfiles, PIN, etc.). */
 export async function vaciarProyecto() {
   const a = admin();
+  // Catálogo: borra productos (y con ellos presentaciones, códigos, stock, kardex...)
+  // y las categorías creadas por pruebas; deja las categorías por defecto.
+  await a.from("productos").delete().not("id", "is", null);
+  const { data: primeras } = await a.from("categorias").select("creado_en").order("creado_en").limit(1);
+  if (primeras?.[0]) {
+    const limite = new Date(new Date(primeras[0].creado_en).getTime() + 60_000).toISOString();
+    for (;;) {
+      // Primero las hojas (sin hijas), para no romper el árbol.
+      const { data: nuevas } = await a.from("categorias").select("id, padre_id").gt("creado_en", limite);
+      if (!nuevas?.length) break;
+      const conHijas = new Set(nuevas.map((c) => c.padre_id).filter(Boolean));
+      const hojas = nuevas.filter((c) => !conHijas.has(c.id)).map((c) => c.id);
+      await a.from("categorias").delete().in("id", hojas);
+    }
+  }
+  await a.from("ajustes").update({ minutos_inactividad: 30, descuento_max_sin_autorizacion: 5, redondeo_precio: 0.05 }).eq("id", 1);
   for (;;) {
     const { data, error } = await a.auth.admin.listUsers({ perPage: 100 });
     if (error) throw error;

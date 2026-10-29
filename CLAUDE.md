@@ -100,6 +100,12 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
   para cuando se envíen facturas.
 - 28/10/2026 — Pruebas automáticas contra un **segundo proyecto Supabase `sandry-pruebas`**,
   nunca contra el de la tienda.
+- 28/10/2026 — **Margen = sobre el costo**: margen % = (precio − costo) / costo. Precio
+  sugerido = costo × (1 + margen objetivo), redondeado hacia arriba a $0.05 (configurable).
+- 28/10/2026 — Sin impresora todavía: etiquetas en A4 (hojas adhesivas) y térmica 50×25 mm.
+- 28/10/2026 — Catálogo desde cero (sin lista previa). Códigos de barras internos: EAN-13
+  con prefijo **29** (2 + 9 + 10 dígitos de secuencia + verificador); los prefijos 20–28
+  quedan libres para las balanzas de peso variable (fase 5).
 - 28/10/2026 — Fase 7 (comprobantes/factura electrónica) se hace AL FINAL, después de la
   fase 8. El ticket interno sin valor tributario se entrega en la fase 5.
 
