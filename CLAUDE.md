@@ -29,7 +29,31 @@ Open Food Facts · decimal.js · Vitest + Playwright.
 - `npm run dev` — app en http://localhost:3000
 - `npm test` — pruebas de lógica (Vitest, `tests/unit`)
 - `npm run test:e2e` — pruebas de flujos (Playwright, `tests/e2e`; hace build y levanta en :3100)
+- `npm run test:db` — reglas RLS y funciones contra **sandry-pruebas** (`tests/db`; BORRA sus datos)
 - `npm run typecheck` · `npm run lint` · `npm run build`
+- `npm run db:tipos` — regenera `src/lib/supabase/tipos.ts` desde el proyecto enlazado
+
+## Base de datos (Supabase CLI)
+
+- Cambios de esquema SOLO con migraciones en `supabase/migrations/` (nunca a mano en el panel).
+- El CLI ya tiene sesión (`supabase login`); no pide contraseña de la BD. Por defecto el
+  repo está enlazado a **sandry-pruebas** (`fhehdhpkxqtmeotaxmgm`).
+- Para producción: `npx supabase link --project-ref csupvenhzqgyybyvznpc`, luego
+  `npx supabase db push --linked` y `npx supabase config push` (revisar el diff antes de
+  aceptar), y **volver a enlazar pruebas** al terminar.
+- Ajustes de Auth en `supabase/config.toml`; lo propio de la tienda va en `[remotes.produccion]`.
+- `.env.local` y `.env.test.local` apuntan a **sandry-pruebas** (la PC nunca toca datos reales).
+  La clave secreta se obtiene con `npx supabase projects api-keys --project-ref <ref> --reveal`.
+
+## Acceso y permisos (fase 2)
+
+- Sesión y permisos: `src/server/sesion.ts` (`requerirUsuarioActivo`, `requerirPermiso`).
+  Cada pantalla protegida los llama dentro de `<Suspense>`; cada acción del servidor los
+  vuelve a llamar, y las funciones SQL revisan con `exigir_permiso`.
+- Escrituras sensibles: por funciones SQL `security definer` que dejan bitácora; las tablas
+  no aceptan insert/update directos desde el navegador.
+- Códigos de permiso en la tabla `permisos` (p. ej. `costos.ver`, `reportes.ver`); las
+  fases siguientes usan esos mismos códigos.
 - En esta PC, si la terminal no encuentra `node`/`git`, recargar el PATH:
   `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`
 
@@ -85,7 +109,8 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
   `main` se publica solo en Netlify.
 - App publicada: https://storied-raindrop-2de6ba.netlify.app (Netlify, equipo "Tienda").
   Visibilidad: producción pública, deploy previews privados.
-- Base de datos: Supabase, proyecto `sandry` (`csupvenhzqgyybyvznpc`), región East US.
+- Base de datos de la tienda: Supabase `csupvenhzqgyybyvznpc` (región us-west-2).
+- Base de pruebas: Supabase `Sandry-pruebas` (`fhehdhpkxqtmeotaxmgm`, us-west-2).
 - Variables en Netlify: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 
 ## Pendientes de verificar (SRI / servicios)
