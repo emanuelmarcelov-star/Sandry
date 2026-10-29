@@ -299,3 +299,40 @@ describe("búsqueda", () => {
     expect((await buscar("10"))[0]).toBe("Pan de sal");
   });
 });
+
+describe("ajustar stock desde la ficha", () => {
+  async function stockDe(id: string) {
+    return n((await duena.from("existencias").select("cantidad").eq("producto_id", id).single()).data?.cantidad);
+  }
+
+  test("sumar mercadería con costo actualiza stock y costo promedio", async () => {
+    const antes = await stockDe(idCola); // 60 a $0.63
+    const { data, error } = await duena.rpc("ajustar_stock", { p_producto: idCola, p_tipo: "compra", p_cantidad: 24, p_costo: 0.84 });
+    expect(error).toBeNull();
+    expect(n(data)).toBe(antes + 24);
+    // (60 × 0.63 + 24 × 0.84) / 84 = 0.69
+    const c = (await duena.from("producto_costos").select("costo_promedio").eq("producto_id", idCola).single()).data!;
+    expect(n(c.costo_promedio)).toBe(0.69);
+  });
+
+  test("corregir conteo registra solo la diferencia", async () => {
+    const { data } = await duena.rpc("ajustar_stock", { p_producto: idCola, p_tipo: "conteo", p_cantidad: 80 });
+    expect(n(data)).toBe(80);
+    const { data: ultimo } = await duena.from("movimientos_stock").select("tipo, cantidad").eq("producto_id", idCola).order("id", { ascending: false }).limit(1).single();
+    expect([ultimo?.tipo, n(ultimo?.cantidad)]).toEqual(["conteo", -4]);
+  });
+
+  test("sacar por consumo de la casa resta y queda en la bitácora", async () => {
+    const { data } = await duena.rpc("ajustar_stock", { p_producto: idCola, p_tipo: "autoconsumo", p_cantidad: 2, p_nota: "para la casa" });
+    expect(n(data)).toBe(78);
+    const { data: ev } = await duena.from("bitacora").select("detalle").eq("accion", "ajustar_stock").order("id", { ascending: false }).limit(1).single();
+    expect(ev?.detalle).toMatchObject({ tipo: "autoconsumo", nota: "para la casa" });
+  });
+
+  test("valida la cantidad y el permiso", async () => {
+    expect((await duena.rpc("ajustar_stock", { p_producto: idCola, p_tipo: "merma", p_cantidad: 0 })).error?.message).toContain("mayor que 0");
+    expect((await duena.rpc("ajustar_stock", { p_producto: idCola, p_tipo: "venta", p_cantidad: 1 })).error?.message).toContain("no válido");
+    expect((await cajera.rpc("ajustar_stock", { p_producto: idCola, p_tipo: "compra", p_cantidad: 5 })).error?.code).toBe("42501");
+    expect((await cajera.rpc("ajustar_stock", { p_producto: idCola, p_tipo: "conteo", p_cantidad: 5 })).error?.code).toBe("42501");
+  });
+});

@@ -53,6 +53,41 @@ test("crear un producto con presentaciones: margen, pérdida y precio sugerido",
   await expect(page.getByLabel("La compra tiene IVA (se suma 15%)")).toBeChecked();
 });
 
+test("ajustar stock desde la ficha: sumar jabas, corregir conteo y sacar", async ({ page }) => {
+  await page.goto("/catalogo?q=colita");
+  await page.getByRole("listitem").filter({ hasText: "Coca-Cola 500 ml" }).click();
+
+  // Llegaron 2 jabas: se convierten a 24 unidades.
+  await page.getByRole("button", { name: "Sumar (llegó mercadería)" }).click();
+  await page.getByLabel("¿En qué presentación?").selectOption({ label: "Jaba x12 (12 unidades)" });
+  await page.getByLabel("Cantidad").fill("2");
+  await expect(page.getByText("= 24 unidades")).toBeVisible();
+  await page.getByLabel("Costo de cada jaba x12").fill("9");
+  await expect(page.getByText("Costo real con IVA: $10.35")).toBeVisible();
+  await page.getByLabel("Nota").fill("distribuidor");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(page.getByText("Stock actualizado. Ahora hay 48 unidades.")).toBeVisible();
+
+  // El conteo real da 45.
+  await page.getByRole("button", { name: "Corregir conteo" }).click();
+  await expect(page.getByText("Según la app hay 48 unidades.")).toBeVisible();
+  await page.getByLabel(/¿Cuántas hay realmente\?/).fill("45");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(page.getByText("Stock actualizado. Ahora hay 45 unidades.")).toBeVisible();
+
+  // Se rompió una.
+  await page.getByRole("button", { name: "Sacar (daño, consumo…)" }).click();
+  await page.getByLabel("Motivo").selectOption({ label: "Se dañó o se rompió" });
+  await page.getByLabel("Cantidad").fill("1");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(page.getByText("Stock actualizado. Ahora hay 44 unidades.")).toBeVisible();
+
+  // Todo queda en los últimos movimientos.
+  await expect(page.getByText("Llegó mercadería: +24 unidades · distribuidor")).toBeVisible();
+  await expect(page.getByText("Corrección de conteo: −3 unidades")).toBeVisible();
+  await expect(page.getByText("Se dañó: −1 unidad")).toBeVisible();
+});
+
 test("la búsqueda encuentra por apodo y por código", async ({ page }) => {
   await page.goto("/catalogo?q=colita");
   await expect(page.getByRole("listitem").filter({ hasText: "Coca-Cola 500 ml" })).toBeVisible();

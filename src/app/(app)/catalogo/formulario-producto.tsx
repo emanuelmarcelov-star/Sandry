@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Aviso, Campo, Casilla, Selector } from "@/components/formulario";
 import { esquemaProducto, type DatosProducto } from "@/lib/esquemas/catalogo";
-import { cantidadConUnidad, costoReal, margenSobreCosto, precioSugerido, UNIDADES, type UnidadBase } from "@/lib/catalogo";
+import { costoReal, margenSobreCosto, precioSugerido, UNIDADES, type UnidadBase } from "@/lib/catalogo";
 import { dec, formatoDolares, leerNumero } from "@/lib/dinero";
 import { achicarFoto } from "@/lib/imagen";
 import { textosCatalogo } from "@/lib/textos";
@@ -302,14 +302,7 @@ export function FormularioProducto({
             <Campo id="stockInicial" etiqueta={`${t.stockInicial} (${unidad.nombre.toLowerCase()})`} ayuda={t.ayudaStockInicial} opcional>
               <Input id="stockInicial" inputMode="decimal" {...register("stockInicial")} />
             </Campo>
-          ) : (
-            valores && (
-              <div className="grid content-start gap-2">
-                <span className="text-base font-medium">{t.stockActual}</span>
-                <span className="text-2xl font-bold">{cantidadConUnidad(valores.stockActual, unidadBase as UnidadBase)}</span>
-              </div>
-            )
-          )}
+          ) : null}
         </section>
       )}
 

@@ -1,7 +1,13 @@
 import { notFound } from "next/navigation";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { formatoDolares, formatoFecha } from "@/lib/dinero";
-import { costoAntesDeIva } from "@/lib/catalogo";
+import { cantidadConUnidad, costoAntesDeIva } from "@/lib/catalogo";
+import { ZONA_HORARIA } from "@/lib/dinero";
+import { AjusteStock } from "./ajuste-stock";
+
+function horaEcuador(fecha: string) {
+  return new Intl.DateTimeFormat("es-EC", { timeZone: ZONA_HORARIA, hour: "2-digit", minute: "2-digit" }).format(new Date(fecha));
+}
 import { textosCatalogo } from "@/lib/textos";
 import { puede, requerirPermiso } from "@/server/sesion";
 import { categoriasEnArbol, listarCategorias, obtenerProducto, valoresEfectivos } from "@/server/catalogo";
@@ -63,6 +69,27 @@ export async function PaginaProducto({ id }: { id?: string }) {
       }
     : null;
 
+  // Últimos movimientos del kardex (solo quien ve costos puede leerlo).
+  let movimientos: { fecha: string; texto: string; saldo: string }[] = [];
+  if (producto && verCostos) {
+    const { data } = await supabase
+      .from("movimientos_stock")
+      .select("fecha, tipo, cantidad, saldo, nota")
+      .eq("producto_id", producto.id)
+      .order("fecha", { ascending: false })
+      .limit(8);
+    movimientos = (data ?? []).map((m) => {
+      const cantidad = Number(m.cantidad);
+      const signo = cantidad > 0 ? "+" : "−";
+      const tipo = textosCatalogo.stock.tipos[m.tipo] ?? m.tipo;
+      return {
+        fecha: `${formatoFecha(m.fecha)} ${horaEcuador(m.fecha)}`,
+        texto: `${tipo}: ${signo}${cantidadConUnidad(Math.abs(cantidad), producto.unidadBase)}${m.nota ? ` · ${m.nota}` : ""}`,
+        saldo: cantidadConUnidad(String(m.saldo), producto.unidadBase),
+      };
+    });
+  }
+
   let historial: { fecha: string; texto: string }[] = [];
   if (producto && (puede(yo, "precios.cambiar") || verCostos)) {
     const { data } = await supabase
@@ -83,6 +110,25 @@ export async function PaginaProducto({ id }: { id?: string }) {
   return (
     <div className="grid gap-8">
       <h1 className="text-3xl font-bold">{producto ? t.tituloEditar : t.tituloNuevo}</h1>
+      {producto && (puede(yo, "compras.registrar") || puede(yo, "inventario.ajustar")) && (
+        <AjusteStock
+          productoId={producto.id}
+          stock={producto.stock}
+          unidad={producto.unidadBase}
+          presentaciones={producto.presentaciones.map((p) => ({
+            nombre: p.nombre,
+            factor: p.factor,
+            paraCompra: p.paraCompra,
+            esBase: p.esBase,
+          }))}
+          compraConIva={producto.compraConIva}
+          ivaCompras={ivaCompras}
+          puedeSumar={puede(yo, "compras.registrar")}
+          puedeAjustar={puede(yo, "inventario.ajustar")}
+          puedeVerCostos={verCostos}
+          movimientos={movimientos}
+        />
+      )}
       <FormularioProducto
         valores={valores}
         categorias={arbol.map((c) => ({

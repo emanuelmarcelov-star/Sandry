@@ -66,6 +66,12 @@ Entra con la cuenta de tu mamá (administradora).
      «¡A pérdida!»** porque la jaba te cuesta $9.00. Toca **Usar** junto al sugerido.
    - **Guardar producto**.
 3. **Buscar**: en Productos escribe `colita`. Debe aparecer la Coca-Cola.
+   **Ajustar el stock**: toca la Coca-Cola. Arriba está el recuadro **Stock** con tres botones:
+   - **Sumar (llegó mercadería)**: elige `Jaba x12`, cantidad `2` (verás «= 24 unidades»),
+     y si quieres el costo de cada jaba.
+   - **Corregir conteo**: escribe cuántas hay realmente; la app registra la diferencia.
+   - **Sacar (daño, consumo…)**: elige el motivo (se dañó, se caducó, consumo de la casa…).
+   Debajo verás los últimos movimientos, con fecha, hora y lo que queda.
 4. **Producto por libra**: crea `Papa chola`, «Se cuenta por» **Libra**, precio por
    libra `0.45`, y agrega la presentación `Unidad` con factor `0.4` (una papa ≈ 0.4 lb).
 5. **Excel**: Catálogo → **Importar Excel** → **Descargar plantilla**. Ábrela, mira la

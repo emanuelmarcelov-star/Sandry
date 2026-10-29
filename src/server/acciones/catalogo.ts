@@ -7,7 +7,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { mensajeError, type Resultado } from "@/lib/errores";
 import { erroresPorCampo } from "@/lib/esquemas/usuarios";
 import { esquemaCategoria, esquemaProducto, separarCodigos, type DatosCategoria, type DatosProducto } from "@/lib/esquemas/catalogo";
-import { leerNumero } from "@/lib/dinero";
+import { dec, leerNumero } from "@/lib/dinero";
 import {
   armarImportacion,
   buscarCategoria,
@@ -77,6 +77,48 @@ export async function guardarProducto(datos: DatosProducto): Promise<Resultado<{
   if (error) return { ok: false, mensaje: mensajeError(error, "No se pudo guardar el producto.") };
   revalidatePath("/catalogo");
   return { ok: true, datos: { id: data as string }, mensaje: "Producto guardado." };
+}
+
+export type TipoAjuste = "compra" | "conteo" | "merma" | "caducado" | "robo" | "autoconsumo" | "regalo";
+
+/**
+ * Ajuste rápido de stock desde la ficha del producto. La cantidad viene en la
+ * presentación elegida (ej. 2 jabas) y se convierte a unidad base; el costo
+ * viene por esa presentación y se guarda el costo REAL por unidad base.
+ */
+export async function ajustarStock(entrada: {
+  productoId: string;
+  tipo: TipoAjuste;
+  cantidad: string;
+  factor: string;
+  costo: string;
+  compraConIva: boolean;
+  nota: string;
+}): Promise<Resultado<{ saldo: string }>> {
+  const yo = await requerirPermiso(entrada.tipo === "compra" ? "compras.registrar" : "inventario.ajustar");
+  const cantidad = leerNumero(entrada.cantidad);
+  const factor = leerNumero(entrada.factor) ?? dec(1);
+  if (!cantidad || cantidad.isNegative() || (entrada.tipo !== "conteo" && cantidad.isZero())) {
+    return { ok: false, mensaje: "Escribe una cantidad mayor que 0.", campos: { cantidad: "Cantidad no válida." } };
+  }
+  let costo: string | null = null;
+  if (entrada.tipo === "compra" && entrada.costo.trim() && puede(yo, "costos.ver")) {
+    const c = leerNumero(entrada.costo);
+    if (!c || c.isNegative()) return { ok: false, mensaje: "El costo no es válido.", campos: { costo: "Costo no válido." } };
+    costo = costoReal(c, entrada.compraConIva, await tasaIvaCompras()).dividedBy(factor).toDecimalPlaces(4).toString();
+  }
+
+  const supabase = await clienteServidor();
+  const { data, error } = await supabase.rpc("ajustar_stock", {
+    p_producto: entrada.productoId,
+    p_tipo: entrada.tipo,
+    p_cantidad: Number(cantidad.times(factor).toDecimalPlaces(3).toString()),
+    p_costo: costo === null ? undefined : Number(costo),
+    p_nota: entrada.nota.trim(),
+  });
+  if (error) return { ok: false, mensaje: mensajeError(error, "No se pudo ajustar el stock.") };
+  revalidatePath("/catalogo", "layout");
+  return { ok: true, datos: { saldo: String(data) }, mensaje: "Stock actualizado." };
 }
 
 /** IVA de las compras configurado en Ajustes (por defecto 15%). */

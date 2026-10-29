@@ -755,6 +755,16 @@ export type Database = {
         Args: { p_permisos: string[]; p_rol: string }
         Returns: undefined
       }
+      ajustar_stock: {
+        Args: {
+          p_cantidad: number
+          p_costo?: number
+          p_nota?: string
+          p_producto: string
+          p_tipo: string
+        }
+        Returns: number
+      }
       aprobar_usuario: {
         Args: { p_rol: string; p_usuario: string }
         Returns: undefined
