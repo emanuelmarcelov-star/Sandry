@@ -1,0 +1,12 @@
+<div style="font-family: Arial, sans-serif; font-size: 16px; color: #0f172a; max-width: 480px">
+  <h2 style="color: #15803d">Te invitaron a Sandry</h2>
+  <p>Hola. La administradora de la tienda te creó una cuenta en Sandry, la app de ventas e inventario.</p>
+  <p>Toca el botón para crear tu contraseña y empezar:</p>
+  <p>
+    <a href="{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=invite&siguiente=/cambiar-contrasena"
+       style="display: inline-block; background: #15803d; color: #ffffff; padding: 14px 24px; border-radius: 10px; text-decoration: none; font-weight: bold">
+      Crear mi contraseña
+    </a>
+  </p>
+  <p>El enlace sirve una sola vez y vence en 24 horas.</p>
+</div>

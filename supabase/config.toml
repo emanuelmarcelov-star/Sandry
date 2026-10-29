@@ -228,7 +228,7 @@ enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+max_frequency = "60s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
@@ -414,3 +414,26 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Proyecto de la TIENDA (producción). Lo demás se hereda de arriba.
+[remotes.produccion]
+project_id = "csupvenhzqgyybyvznpc"
+
+[remotes.produccion.auth]
+site_url = "https://storied-raindrop-2de6ba.netlify.app"
+additional_redirect_urls = ["https://storied-raindrop-2de6ba.netlify.app/**"]
+
+# Correos en español: Supabase solo permite cambiarlos con un SMTP propio (Gmail de la tienda).
+# Se activan quitando el # cuando el SMTP esté configurado en el proyecto de la tienda.
+# [remotes.produccion.auth.email.template.recovery]
+# subject = "Sandry: crea una contraseña nueva"
+# content_path = "./supabase/plantillas/recuperar.html"
+
+# [remotes.produccion.auth.email.template.invite]
+# subject = "Te invitaron a Sandry"
+# content_path = "./supabase/plantillas/invitacion.html"
+
+# [remotes.produccion.auth.email.template.confirmation]
+# subject = "Sandry: confirma tu correo"
+# content_path = "./supabase/plantillas/confirmar.html"
+

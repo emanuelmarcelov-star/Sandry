@@ -1,0 +1,12 @@
+<div style="font-family: Arial, sans-serif; font-size: 16px; color: #0f172a; max-width: 480px">
+  <h2 style="color: #15803d">Sandry · Crear una contraseña nueva</h2>
+  <p>Hola. Alguien pidió cambiar la contraseña de tu cuenta en Sandry.</p>
+  <p>
+    <a href="{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=recovery&siguiente=/cambiar-contrasena"
+       style="display: inline-block; background: #15803d; color: #ffffff; padding: 14px 24px; border-radius: 10px; text-decoration: none; font-weight: bold">
+      Crear contraseña nueva
+    </a>
+  </p>
+  <p>El enlace sirve una sola vez y vence en 1 hora.</p>
+  <p style="color: #64748b">Si no fuiste tú, ignora este correo: tu contraseña no cambia.</p>
+</div>
