@@ -155,6 +155,12 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
 - 29/10/2026 — Cuentas de dinero iniciales: **Caja, Banco, Deuna y Dinero personal de la
   dueña**. Pagar algo desde «Dinero personal» = aporte de la dueña (esa cuenta acumula en
   negativo lo que ella puso; un retiro de la dueña la sube).
+- 29/10/2026 — **Netlify gratis se quedó sin créditos** (cada publicación gasta ~15 de 300 al
+  mes; el ciclo va del 28 al 27). Desde ahora se publica en la web **solo cuando una fase está
+  lista para probar**. Mientras no haya créditos se prueba en la PC: `.env.production.local`
+  (ignorado por git) apunta a la tienda real sin clave secreta → `next build` y
+  `next start -H 0.0.0.0 -p 3200`.
+- 29/10/2026 — **Fase 4 aprobada** (probada en la PC).
 - 28/10/2026 — Fase 7 (comprobantes/factura electrónica) se hace AL FINAL, después de la
   fase 8. El ticket interno sin valor tributario se entrega en la fase 5.
 

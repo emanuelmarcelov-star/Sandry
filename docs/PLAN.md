@@ -9,7 +9,7 @@ Orden real: 1 → 2 → 3 → 4 → 5 → 6 → 8 → 7.
 | 1. Preparación | ✅ Aprobada el 28/10/2026 — https://storied-raindrop-2de6ba.netlify.app |
 | 2. Usuarios | ✅ Aprobada el 28/10/2026 |
 | 3. Catálogo | ✅ Aprobada el 29/10/2026 (ver docs/FASE-3.md) |
-| 4. Abastecimiento e inventario | Lista para probar (ver docs/FASE-4.md) |
+| 4. Abastecimiento e inventario | ✅ Aprobada el 29/10/2026, probada en la PC (en la web se publica el 28/11/2026, al renovarse los créditos de Netlify) |
 
 ---
 
