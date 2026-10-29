@@ -14,7 +14,6 @@ import type { DatosCategoria } from "@/lib/esquemas/catalogo";
 import { textosCatalogo } from "@/lib/textos";
 
 const t = textosCatalogo.categorias;
-const IVA: Record<string, string> = { "15": "15%", "0": "0%", exento: "Exento" };
 
 type Categoria = {
   id: string;
@@ -59,8 +58,7 @@ export function ArbolCategorias({ categorias }: { categorias: Categoria[] }) {
             <span className={c.nivel === 0 ? "text-lg font-semibold" : "text-base"}>{c.nombre}</span>
             {!c.activa && <Badge variant="secondary">Desactivada</Badge>}
             <span className="text-sm text-muted-foreground">
-              IVA {IVA[c.ivaEfectivo]}
-              {!c.tarifaIva && c.nivel > 0 && ` (${t.heredado.toLowerCase()})`} · margen {c.margenEfectivo}%
+              Margen objetivo {c.margenEfectivo}%
               {!c.margenObjetivo && c.nivel > 0 && ` (${t.heredado.toLowerCase()})`}
             </span>
             <span className="ml-auto flex gap-1">
@@ -146,7 +144,7 @@ function DialogoCategoria({
               ))}
             </Selector>
           </Campo>
-          <div className="grid grid-cols-[auto_1fr_1fr] gap-3">
+          <div className="grid grid-cols-[auto_1fr] gap-3">
             <Campo id="cat-color" etiqueta={t.color}>
               <input
                 id="cat-color"
@@ -155,14 +153,6 @@ function DialogoCategoria({
                 onChange={(e) => cambiar({ color: e.target.value })}
                 className="h-12 w-16 cursor-pointer rounded-lg border"
               />
-            </Campo>
-            <Campo id="cat-iva" etiqueta={t.iva}>
-              <Selector id="cat-iva" value={datos.tarifaIva} onChange={(e) => cambiar({ tarifaIva: e.target.value as DatosCategoria["tarifaIva"] })}>
-                <option value="">{t.heredado}</option>
-                <option value="15">15%</option>
-                <option value="0">0%</option>
-                <option value="exento">Exento</option>
-              </Selector>
             </Campo>
             <Campo id="cat-margen" etiqueta={t.margen}>
               <Input

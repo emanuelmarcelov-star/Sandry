@@ -18,7 +18,9 @@ test("crear un producto con presentaciones: margen, pérdida y precio sugerido",
   await page.getByLabel("Marca").fill("Coca-Cola");
   await page.getByLabel("Categoría").selectOption({ label: "Bebidas › Gaseosas" });
   await page.getByLabel("Apodos para buscarlo").fill("colita, coca");
-  await page.getByLabel("Costo por unidad").fill("0.75");
+  await page.getByLabel("Costo de compra por unidad").fill("0.75");
+  // No hay selector de IVA de venta: el precio lo pone la tienda libremente.
+  await expect(page.getByLabel("IVA", { exact: true })).toHaveCount(0);
   await page.getByLabel("Stock inicial (unidad)").fill("24");
 
   await page.locator("#pres-0-precio").fill("1.00");
@@ -34,11 +36,21 @@ test("crear un producto con presentaciones: margen, pérdida y precio sugerido",
   await page.getByRole("button", { name: "Usar" }).nth(1).click();
   await expect(page.locator("#pres-1-precio")).toHaveValue("10.80");
 
+  // Si la compra tiene IVA, el costo real sube 15% y el margen se recalcula.
+  await page.getByLabel("La compra tiene IVA (se suma 15%)").check();
+  await expect(page.getByText("Costo real con IVA: $0.86")).toBeVisible(); // 0.75 × 1.15 = 0.8625
+  await expect(page.getByText("Margen: 15.9% · Ganancia: $0.14")).toBeVisible();
+
   await page.getByRole("button", { name: "Guardar producto" }).click();
   await expect(page).toHaveURL(/\/catalogo$/);
   const fila = page.getByRole("listitem").filter({ hasText: "Coca-Cola 500 ml" });
   await expect(fila).toContainText("$1.00");
   await expect(fila).toContainText("24 unidades");
+
+  // Al volver a abrirlo, se ve el costo de la factura y la casilla marcada.
+  await fila.click();
+  await expect(page.getByLabel("Costo de compra por unidad")).toHaveValue("0.75");
+  await expect(page.getByLabel("La compra tiene IVA (se suma 15%)")).toBeChecked();
 });
 
 test("la búsqueda encuentra por apodo y por código", async ({ page }) => {
@@ -124,5 +136,5 @@ test("categorías: crear una subcategoría", async ({ page }) => {
   await page.getByLabel("Margen objetivo %").fill("30");
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(page.getByText("Categoría guardada.")).toBeVisible();
-  await expect(page.getByRole("listitem").filter({ hasText: "Tés fríos" })).toContainText("margen 30%");
+  await expect(page.getByRole("listitem").filter({ hasText: "Tés fríos" })).toContainText("Margen objetivo 30%");
 });

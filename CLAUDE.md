@@ -123,6 +123,13 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
 - 28/10/2026 — Catálogo desde cero (sin lista previa). Códigos de barras internos: EAN-13
   con prefijo **29** (2 + 9 + 10 dígitos de secuencia + verificador); los prefijos 20–28
   quedan libres para las balanzas de peso variable (fase 5).
+- 29/10/2026 — **IVA solo en las compras, no en la venta.** La tienda está en un lugar muy
+  remoto: el precio de venta lo pone la dueña libremente (mucho más que costo + IVA). En la
+  pantalla NO se muestra IVA de venta (productos, categorías). El costo real = costo de
+  compra × (1 + IVA de compras) cuando se marca «La compra tiene IVA»; si no, el costo tal
+  cual. Tasa en `ajustes.iva_compras` (15%). Cada producto recuerda `compra_con_iva` para
+  sugerirlo en las compras (fase 4). Las columnas `tarifa_iva` siguen en la BD, ocultas, por
+  si algún día la tienda factura (fase 7).
 - 28/10/2026 — Fase 7 (comprobantes/factura electrónica) se hace AL FINAL, después de la
   fase 8. El ticket interno sin valor tributario se entrega en la fase 5.
 

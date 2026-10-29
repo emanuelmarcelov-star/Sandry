@@ -17,7 +17,7 @@ const t = textosCatalogo.importar;
 /** Columnas que se pueden corregir en la vista previa (las demás se ven igual). */
 const EDITABLES: ClaveColumna[] = [
   "codigoBarras", "plu", "nombre", "marca", "categoria", "subcategoria", "unidadBase",
-  "presentacion", "factor", "precioCompra", "precioVenta", "iva", "stockInicial", "stockMinimo",
+  "presentacion", "factor", "precioCompra", "precioVenta", "compraConIva", "stockInicial", "stockMinimo",
 ];
 
 export function Importador() {

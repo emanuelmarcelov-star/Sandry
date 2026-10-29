@@ -44,7 +44,10 @@ export const esquemaProducto = z.object({
   ubicacion: z.string().trim().max(60),
   activo: z.boolean(),
   fotoRuta: z.string(),
+  /** Costo de compra por unidad base, tal como lo dice la factura (antes del IVA). */
   costoUnitario: numeroOpcional("Costo no válido."),
+  /** Si la compra tiene IVA: el costo real es el costo + IVA de compras. */
+  compraConIva: z.boolean(),
   stockInicial: numeroOpcional("Stock no válido."),
   presentaciones: z
     .array(esquemaPresentacion)

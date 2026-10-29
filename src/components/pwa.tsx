@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useOffline } from "next/offline";
 import { WifiOff } from "lucide-react";
 import { textos } from "@/lib/textos";
@@ -15,9 +15,24 @@ export function RegistroServiceWorker() {
   return null;
 }
 
-/** Franja visible en todas las pantallas cuando se pierde la conexión. */
+function suscribirRed(avisar: () => void) {
+  window.addEventListener("online", avisar);
+  window.addEventListener("offline", avisar);
+  return () => {
+    window.removeEventListener("online", avisar);
+    window.removeEventListener("offline", avisar);
+  };
+}
+
+/**
+ * Franja visible en todas las pantallas cuando se pierde la conexión.
+ * Junta dos señales: la de Next (falló una petición) y la del navegador
+ * (navigator.onLine), así se nota aunque se corte justo al abrir la página.
+ */
 export function AvisoSinConexion() {
-  const sinConexion = useOffline();
+  const peticionFallida = useOffline();
+  const sinRed = useSyncExternalStore(suscribirRed, () => !navigator.onLine, () => false);
+  const sinConexion = peticionFallida || sinRed;
   if (!sinConexion) return null;
   return (
     <div

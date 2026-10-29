@@ -37,6 +37,12 @@ export function FormularioAjustes({ valores }: { valores: DatosAjustes }) {
       <Campo id="descuentoMaximo" etiqueta={t.descuentoMaximo} error={e.descuentoMaximo?.message}>
         <Input id="descuentoMaximo" inputMode="decimal" {...register("descuentoMaximo")} />
       </Campo>
+      <Campo id="ivaCompras" etiqueta={t.ivaCompras} ayuda={t.ayudaIvaCompras} error={e.ivaCompras?.message}>
+        <Input id="ivaCompras" inputMode="decimal" {...register("ivaCompras")} />
+      </Campo>
+      <Campo id="redondeoPrecio" etiqueta={t.redondeoPrecio} ayuda={t.ayudaRedondeo} error={e.redondeoPrecio?.message}>
+        <Input id="redondeoPrecio" inputMode="decimal" {...register("redondeoPrecio")} />
+      </Campo>
       <Button type="submit" size="lg" disabled={guardando}>
         {guardando ? textos.general.guardando : textos.general.guardar}
       </Button>

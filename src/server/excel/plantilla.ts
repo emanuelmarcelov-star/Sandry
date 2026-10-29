@@ -65,9 +65,9 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
     ["Unidad base: cómo se cuenta el stock: unidad, libra, kilo o litro.", false],
     ["Presentación: Unidad, Funda x100, Paquete x6, Jaba x12, Libra... (vacío = la unidad base).", false],
     ["Factor: cuántas unidades base trae la presentación. Jaba x12 = 12. Unidad = 1. Papas: 1 unidad ≈ 0.4 libras.", false],
-    ["Precio de compra: lo que pagas por ESA presentación (ej. la jaba completa).", false],
-    ["Precio de venta: lo que cobras por ESA presentación, con IVA incluido.", false],
-    ["IVA: 15%, 0% o exento. Vacío = el de la categoría.", false],
+    ["Precio de compra: lo que pagas por ESA presentación (ej. la jaba completa), como dice la factura o el recibo.", false],
+    ["Compra con IVA: «sí» si a ese precio de compra hay que sumarle el IVA (15%); «no» si no lleva IVA. Sandry guarda el costo real.", false],
+    ["Precio de venta: lo que cobras por ESA presentación (lo pones tú, libremente).", false],
     ["Stock inicial: cuántas tienes de ESA presentación (ej. 2 jabas). Se convierte solo a unidades.", false],
     ["Stock mínimo: desde cuántas unidades base quieres un aviso de stock bajo.", false],
     ["Puedes escribir los números con coma o con punto (1,50 o 1.50) y con o sin $.", false],
@@ -91,7 +91,7 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
     raices.map((c) => c.nombre),
     hijas.map((c) => c.nombre),
     ["unidad", "libra", "kilo", "litro"],
-    ["15%", "0%", "exento"],
+    ["sí", "no"],
     ["sí", "no"],
     CUENTAS_POR_DEFECTO,
     GASTOS_POR_DEFECTO,
@@ -107,13 +107,13 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
   const ejemplosHoja = libro.addWorksheet("Ejemplos", { properties: { tabColor: { argb: "FFB45309" } } });
   encabezado(ejemplosHoja, COLUMNAS_PRODUCTOS.map((c) => ({ titulo: c.titulo, ancho: c.ancho })));
   const ejemplos = [
-    ["7861001234565", "", "Coca-Cola 500 ml", "Coca-Cola", "Bebidas", "Gaseosas", "unidad", "Unidad", 1, 0.75, 1, "15%", 24, 12, "", "Coca-Cola"],
-    ["17861001234562", "", "Coca-Cola 500 ml", "Coca-Cola", "Bebidas", "Gaseosas", "unidad", "Jaba x12", 12, 9, 10.8, "15%", 0, "", "", "Coca-Cola"],
-    ["", "25", "Papa chola", "", "Frutas y verduras", "Tubérculos (papas)", "libra", "Libra", 1, 0.3, 0.45, "0%", 50, 10, "", "Mercado"],
-    ["", "25", "Papa chola", "", "Frutas y verduras", "Tubérculos (papas)", "libra", "Unidad", 0.4, "", 0.2, "0%", "", "", "", ""],
-    ["", "10", "Pan de sal", "", "Panadería", "", "unidad", "Unidad", 1, 0.1, 0.15, "0%", 40, 20, "", "Panadería"],
-    ["", "30", "Caramelo de leche", "", "Golosinas y snacks", "Caramelos", "unidad", "Unidad", 1, "", 0.05, "15%", "", "", "", ""],
-    ["", "30", "Caramelo de leche", "", "Golosinas y snacks", "Caramelos", "unidad", "Funda x100", 100, 2, 4, "15%", 3, 50, "", "Mayorista"],
+    ["7861001234565", "", "Coca-Cola 500 ml", "Coca-Cola", "Bebidas", "Gaseosas", "unidad", "Unidad", 1, 0.75, 1, "sí", 24, 12, "", "Coca-Cola"],
+    ["17861001234562", "", "Coca-Cola 500 ml", "Coca-Cola", "Bebidas", "Gaseosas", "unidad", "Jaba x12", 12, 9, 10.8, "sí", 0, "", "", "Coca-Cola"],
+    ["", "25", "Papa chola", "", "Frutas y verduras", "Tubérculos (papas)", "libra", "Libra", 1, 0.3, 0.45, "no", 50, 10, "", "Mercado"],
+    ["", "25", "Papa chola", "", "Frutas y verduras", "Tubérculos (papas)", "libra", "Unidad", 0.4, "", 0.2, "no", "", "", "", ""],
+    ["", "10", "Pan de sal", "", "Panadería", "", "unidad", "Unidad", 1, 0.1, 0.15, "no", 40, 20, "", "Panadería"],
+    ["", "30", "Caramelo de leche", "", "Golosinas y snacks", "Caramelos", "unidad", "Unidad", 1, "", 0.05, "sí", "", "", "", ""],
+    ["", "30", "Caramelo de leche", "", "Golosinas y snacks", "Caramelos", "unidad", "Funda x100", 100, 2, 4, "sí", 3, 50, "", "Mayorista"],
   ];
   ejemplos.forEach((e) => ejemplosHoja.addRow(e));
   ejemplosHoja.getCell("Q1").value = "← Solo ejemplos para guiarte: esta hoja NO se importa. Llena la hoja «Productos».";
@@ -122,7 +122,7 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
   lista(prod, "E", rango("A", raices.length), "Elige una categoría de la lista o escribe una nueva.");
   lista(prod, "F", rango("B", hijas.length), "Elige una subcategoría de la lista o escribe una nueva.");
   lista(prod, "G", rango("C", 4), "Usa unidad, libra, kilo o litro.");
-  lista(prod, "L", rango("D", 3), "Usa 15%, 0% o exento.");
+  lista(prod, "L", rango("D", 2), "Escribe sí o no.");
   for (const col of ["I", "J", "K", "M", "N"]) prod.getColumn(col).numFmt = "0.00##";
   prod.getColumn("A").numFmt = "@";
   prod.getColumn("B").numFmt = "@";

@@ -97,13 +97,14 @@ export type ProductoCompleto = {
   ubicacion: string;
   activo: boolean;
   pendiente: boolean;
+  compraConIva: boolean;
   stock: string;
   costo: string | null; // null si no tiene permiso
   presentaciones: PresentacionCompleta[];
 };
 
 const CAMPOS_PRODUCTO = `id, nombre, marca, categoria_id, plu, sinonimos, foto_ruta, unidad_base, tarifa_iva, stock_minimo,
-  maneja_caducidad, retornable, solo_mayores, ubicacion, activo, pendiente,
+  maneja_caducidad, retornable, solo_mayores, ubicacion, activo, pendiente, compra_con_iva,
   existencias(cantidad),
   presentaciones(id, nombre, factor, precio_venta, para_venta, para_compra, es_base, orden, activa),
   codigos_barras(codigo, presentacion_id)`;
@@ -111,7 +112,7 @@ const CAMPOS_PRODUCTO = `id, nombre, marca, categoria_id, plu, sinonimos, foto_r
 type FilaProducto = {
   id: string; nombre: string; marca: string; categoria_id: string | null; plu: string | null; sinonimos: string[];
   foto_ruta: string | null; unidad_base: string; tarifa_iva: string; stock_minimo: number; maneja_caducidad: boolean;
-  retornable: boolean; solo_mayores: boolean; ubicacion: string; activo: boolean; pendiente: boolean;
+  retornable: boolean; solo_mayores: boolean; ubicacion: string; activo: boolean; pendiente: boolean; compra_con_iva: boolean;
   existencias: { cantidad: number } | { cantidad: number }[] | null;
   presentaciones: { id: string; nombre: string; factor: number; precio_venta: number | null; para_venta: boolean; para_compra: boolean; es_base: boolean; orden: number; activa: boolean }[];
   codigos_barras: { codigo: string; presentacion_id: string | null }[];
@@ -153,6 +154,7 @@ function armar(f: FilaProducto, costos: Map<string, string>): ProductoCompleto {
     ubicacion: f.ubicacion,
     activo: f.activo,
     pendiente: f.pendiente,
+    compraConIva: f.compra_con_iva,
     stock: String(existencia?.cantidad ?? 0),
     costo: costos.get(f.id) ?? null,
     presentaciones,

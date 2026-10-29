@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { formatoDolares, formatoFecha } from "@/lib/dinero";
+import { costoAntesDeIva } from "@/lib/catalogo";
 import { textosCatalogo } from "@/lib/textos";
 import { puede, requerirPermiso } from "@/server/sesion";
 import { categoriasEnArbol, listarCategorias, obtenerProducto, valoresEfectivos } from "@/server/catalogo";
@@ -15,13 +16,14 @@ export async function PaginaProducto({ id }: { id?: string }) {
   const [categorias, producto, { data: ajustes }] = await Promise.all([
     listarCategorias(),
     id ? obtenerProducto(id, yo) : Promise.resolve(null),
-    supabase.from("ajustes").select("redondeo_precio").maybeSingle(),
+    supabase.from("ajustes").select("redondeo_precio, iva_compras").maybeSingle(),
   ]);
   if (id && !producto) notFound();
 
   const efectivos = valoresEfectivos(categorias);
   const arbol = categoriasEnArbol(categorias).filter((c) => c.activa || c.id === producto?.categoriaId);
   const verCostos = puede(yo, "costos.ver");
+  const ivaCompras = String(ajustes?.iva_compras ?? 15);
 
   const valores: ValoresIniciales | null = producto
     ? {
@@ -40,7 +42,12 @@ export async function PaginaProducto({ id }: { id?: string }) {
         ubicacion: producto.ubicacion,
         activo: producto.activo,
         fotoRuta: producto.fotoRuta ?? "",
-        costoUnitario: producto.costo && Number(producto.costo) > 0 ? producto.costo : "",
+        // Se muestra lo de la factura (sin IVA); se guarda el costo real.
+        costoUnitario:
+          producto.costo && Number(producto.costo) > 0
+            ? costoAntesDeIva(producto.costo, producto.compraConIva, ivaCompras).toString()
+            : "",
+        compraConIva: producto.compraConIva,
         stockInicial: "",
         presentaciones: producto.presentaciones.map((p) => ({
           id: p.id,
@@ -86,6 +93,7 @@ export async function PaginaProducto({ id }: { id?: string }) {
           margen: efectivos[c.id].margen,
         }))}
         redondeo={String(ajustes?.redondeo_precio ?? "0.05")}
+        ivaCompras={ivaCompras}
         puedeCambiarPrecios={puede(yo, "precios.cambiar")}
         puedeVerCostos={verCostos}
         urlFotos={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/fotos-productos/`}

@@ -5,17 +5,21 @@ Enlace de la app: **https://storied-raindrop-2de6ba.netlify.app** → menú → 
 ## Qué se hizo
 
 - **Categorías en árbol** ya cargadas (Bebidas › Gaseosas, Víveres › Arroz, …), con
-  color, IVA y **margen objetivo**. Se pueden crear, renombrar, mover y desactivar.
-  Si una subcategoría no tiene IVA o margen propio, **hereda** el de su categoría.
+  color y **margen objetivo** (para el precio sugerido). Se pueden crear, renombrar, mover
+  y desactivar. Si una subcategoría no tiene margen propio, **hereda** el de su categoría.
 - **Productos** con: nombre, marca, categoría, foto, apodos para buscarlo (ej. "colita"),
   código corto (PLU) para lo que no tiene código de barras, unidad en que se cuenta
-  (unidad, libra, kilo, litro), IVA, stock mínimo, ubicación, si caduca, si es retornable
+  (unidad, libra, kilo, litro), stock mínimo, ubicación, si caduca, si es retornable
   y si es solo para mayores de 18.
 - **Presentaciones**: unidad, funda, paquete, jaba, libra… cada una con su factor
   (jaba x12 = 12), su **precio propio** y sus códigos de barras (el de la caja también).
   El stock siempre se guarda en la unidad base.
+- **IVA solo en las compras** (cambio del 29/10/2026): el precio de venta lo pone tu mamá
+  libremente, sin IVA de por medio. Junto al costo hay una casilla **«La compra tiene IVA
+  (se suma 15%)»**: si la marcas, el **costo real** es el de la factura + 15%. El 15% se
+  cambia en **Ajustes** si algún día cambia la ley.
 - **Precios**:
-  - El **margen sobre el costo** se calcula solo. Si vendes a pérdida, se pone **en rojo**.
+  - El **margen sobre el costo real** se calcula solo. Si vendes a pérdida, se pone **en rojo**.
   - El **precio sugerido** sale del margen objetivo de la categoría y se redondea a $0.05.
   - Hay **historial** de cada cambio de precio y de costo.
 - **Costos privados**: solo los ve la administradora (y la encargada de inventario).
@@ -39,8 +43,8 @@ Enlace de la app: **https://storied-raindrop-2de6ba.netlify.app** → menú → 
 - **Búsqueda tolerante**: «cocacola», «coca 3l», «pilsner» (mal escrito), «AZUCAR»,
   por apodo, por código o por código corto.
 
-Pruebas automáticas: 80 de cálculos (margen, precio sugerido, IVA, códigos, Excel),
-54 de reglas de la base de datos y 24 de recorridos en el navegador. Todas pasan.
+Pruebas automáticas: 89 de cálculos (margen, precio sugerido, costo con IVA, códigos,
+Excel), 54 de reglas de la base de datos y 24 de recorridos en el navegador. Todas pasan.
 
 ---
 
@@ -53,8 +57,10 @@ Entra con la cuenta de tu mamá (administradora).
 2. **Crear un producto con presentaciones**: Catálogo → **Nuevo producto**.
    - Nombre: `Coca-Cola 500 ml`, Categoría: `Bebidas › Gaseosas`.
    - Apodos: `colita, coca`.
-   - Costo por unidad: `0.75`. Stock inicial: `24`.
+   - Costo de compra por unidad: `0.75`. Stock inicial: `24`.
    - En la presentación **Unidad**: precio `1.00`. Debajo verás «Margen: 33.3%».
+   - Marca **«La compra tiene IVA»**: verás «Costo real con IVA: $0.86» y el margen baja
+     a 15.9%. Desmárcala si esa compra no lleva IVA.
    - Si tiene código de barras, escríbelo o escanéalo y prueba **Buscar datos por código**.
    - **Agregar presentación** → `Jaba x12`, factor `12`, precio `8`. Saldrá **en rojo
      «¡A pérdida!»** porque la jaba te cuesta $9.00. Toca **Usar** junto al sugerido.
@@ -80,9 +86,10 @@ compras desde el celular, kardex y alertas).
 
 ## Notas
 
-- **IVA por categoría**: puse valores iniciales (0% para canasta básica y medicinas,
-  15% para el resto), editables. Como la tienda está **Sin RUC**, hoy no afectan nada.
-  Antes de facturar (fase 7) el contador debe revisarlos.
+- **IVA de venta**: ya no se muestra. Internamente se guarda un valor por categoría,
+  oculto, solo por si algún día la tienda se registra para facturar (fase 7).
+- **Excel**: la columna «IVA» ahora se llama **«Compra con IVA»** (sí / no). Las
+  plantillas que ya hayas descargado siguen funcionando.
 - **Fotos**: se achican solas antes de subirlas (≈100 KB cada una) para que el plan
   gratuito de Supabase alcance por años.
 - **Sin impresora todavía**: las etiquetas se pueden guardar como PDF. En la fase 5 te

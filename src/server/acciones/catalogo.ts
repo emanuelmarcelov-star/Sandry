@@ -21,7 +21,7 @@ import {
   type FilaProducto,
   type ProductoActual,
 } from "@/lib/excel/productos";
-import type { TarifaIva } from "@/lib/catalogo";
+import { costoReal, type TarifaIva } from "@/lib/catalogo";
 import type { Json } from "@/lib/supabase/tipos";
 import { puede, requerirPermiso } from "@/server/sesion";
 import { buscarProductos, itemsDeEtiqueta, listarCategorias, valoresEfectivos, type ItemEtiqueta } from "@/server/catalogo";
@@ -35,6 +35,8 @@ export async function guardarProducto(datos: DatosProducto): Promise<Resultado<{
   const revisado = esquemaProducto.safeParse(datos);
   if (!revisado.success) return { ok: false, mensaje: "Revisa los datos marcados.", campos: erroresPorCampo(revisado.error) };
   const d = revisado.data;
+  const supabase = await clienteServidor();
+  const ivaCompras = await tasaIvaCompras();
 
   const payload = {
     ...(d.id ? { id: d.id } : {}),
@@ -52,6 +54,7 @@ export async function guardarProducto(datos: DatosProducto): Promise<Resultado<{
     solo_mayores: d.soloMayores,
     ubicacion: d.ubicacion,
     activo: d.activo,
+    compra_con_iva: d.compraConIva,
     presentaciones: d.presentaciones.map((p, i) => ({
       ...(p.id ? { id: p.id } : {}),
       nombre: p.nombre,
@@ -63,15 +66,24 @@ export async function guardarProducto(datos: DatosProducto): Promise<Resultado<{
       orden: i,
       codigos: separarCodigos(p.codigos),
     })),
-    ...(puede(yo, "costos.ver") && d.costoUnitario.trim() ? { costo_unitario: numero(d.costoUnitario) } : {}),
+    // El costo que se guarda es el REAL: lo de la factura + IVA si la compra lo tiene.
+    ...(puede(yo, "costos.ver") && d.costoUnitario.trim()
+      ? { costo_unitario: costoReal(numero(d.costoUnitario)!, d.compraConIva, ivaCompras).toString() }
+      : {}),
     ...(!d.id && d.stockInicial.trim() ? { stock_inicial: numero(d.stockInicial) } : {}),
   };
 
-  const supabase = await clienteServidor();
   const { data, error } = await supabase.rpc("guardar_producto", { p: payload });
   if (error) return { ok: false, mensaje: mensajeError(error, "No se pudo guardar el producto.") };
   revalidatePath("/catalogo");
   return { ok: true, datos: { id: data as string }, mensaje: "Producto guardado." };
+}
+
+/** IVA de las compras configurado en Ajustes (por defecto 15%). */
+async function tasaIvaCompras(): Promise<string> {
+  const supabase = await clienteServidor();
+  const { data } = await supabase.from("ajustes").select("iva_compras").maybeSingle();
+  return String(data?.iva_compras ?? 15);
 }
 
 export async function sugerirPlu(): Promise<string | null> {
@@ -216,9 +228,10 @@ export async function guardarCategoria(datos: DatosCategoria): Promise<Resultado
 
 async function contextoImportacion(): Promise<{ contexto: ContextoImportacion; actuales: Map<string, ProductoActual> }> {
   const yo = await requerirPermiso("productos.editar");
-  const [categorias, productos] = await Promise.all([
+  const [categorias, productos, ivaCompras] = await Promise.all([
     listarCategorias(),
     buscarProductos(yo, { incluirInactivos: true, limite: 20000 }),
+    tasaIvaCompras(),
   ]);
   const actuales = new Map<string, ProductoActual>(
     productos.map((p) => [
@@ -229,6 +242,7 @@ async function contextoImportacion(): Promise<{ contexto: ContextoImportacion; a
   return {
     contexto: {
       puedeVerCostos: puede(yo, "costos.ver"),
+      ivaCompras,
       categorias: categorias.map((c) => ({ id: c.id, nombre: c.nombre, padreId: c.padreId })),
       productos: productos.map((p) => ({
         id: p.id,
@@ -341,6 +355,7 @@ export async function confirmarImportacion(entrada: {
     actuales,
     categoriaId: (c, s) => (c ? (ids.get(`${normalizarTexto(c)}|${normalizarTexto(s ?? "")}`) ?? null) : null),
     ivaDeCategoria: (id) => ((id && efectivos[id]?.tarifaIva) || "15") as TarifaIva,
+    ivaCompras: contexto.ivaCompras,
   });
   if (!productos.length) return { ok: false, mensaje: "No hay filas para guardar." };
 

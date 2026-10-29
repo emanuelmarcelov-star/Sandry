@@ -15,7 +15,7 @@ export default function Ajustes() {
 async function Contenido() {
   await requerirPermiso("ajustes.gestionar");
   const supabase = await clienteServidor();
-  const { data } = await supabase.from("ajustes").select("minutos_inactividad, descuento_max_sin_autorizacion").maybeSingle();
+  const { data } = await supabase.from("ajustes").select("minutos_inactividad, descuento_max_sin_autorizacion, iva_compras, redondeo_precio").maybeSingle();
   return (
     <div className="grid max-w-xl gap-6">
       <h1 className="text-3xl font-bold">{textos.ajustes.titulo}</h1>
@@ -23,6 +23,8 @@ async function Contenido() {
         valores={{
           minutosInactividad: String(data?.minutos_inactividad ?? 30),
           descuentoMaximo: String(data?.descuento_max_sin_autorizacion ?? 5),
+          ivaCompras: String(data?.iva_compras ?? 15),
+          redondeoPrecio: String(data?.redondeo_precio ?? "0.05"),
         }}
       />
     </div>

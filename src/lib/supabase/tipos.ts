@@ -44,6 +44,7 @@ export type Database = {
           actualizado_en: string
           descuento_max_sin_autorizacion: number
           id: number
+          iva_compras: number
           minutos_inactividad: number
           nombre_tienda: string
           redondeo_precio: number
@@ -52,6 +53,7 @@ export type Database = {
           actualizado_en?: string
           descuento_max_sin_autorizacion?: number
           id?: number
+          iva_compras?: number
           minutos_inactividad?: number
           nombre_tienda?: string
           redondeo_precio?: number
@@ -60,6 +62,7 @@ export type Database = {
           actualizado_en?: string
           descuento_max_sin_autorizacion?: number
           id?: number
+          iva_compras?: number
           minutos_inactividad?: number
           nombre_tienda?: string
           redondeo_precio?: number
@@ -599,6 +602,7 @@ export type Database = {
           activo: boolean
           actualizado_en: string
           categoria_id: string | null
+          compra_con_iva: boolean
           creado_en: string
           foto_ruta: string | null
           id: string
@@ -620,6 +624,7 @@ export type Database = {
           activo?: boolean
           actualizado_en?: string
           categoria_id?: string | null
+          compra_con_iva?: boolean
           creado_en?: string
           foto_ruta?: string | null
           id?: string
@@ -641,6 +646,7 @@ export type Database = {
           activo?: boolean
           actualizado_en?: string
           categoria_id?: string | null
+          compra_con_iva?: boolean
           creado_en?: string
           foto_ruta?: string | null
           id?: string
@@ -730,6 +736,7 @@ export type Database = {
       actualizar_ajustes: {
         Args: {
           p_descuento_max: number
+          p_iva_compras?: number
           p_minutos_inactividad: number
           p_redondeo_precio?: number
         }
@@ -765,6 +772,7 @@ export type Database = {
           activo: boolean
           actualizado_en: string
           categoria_id: string | null
+          compra_con_iva: boolean
           creado_en: string
           foto_ruta: string | null
           id: string
