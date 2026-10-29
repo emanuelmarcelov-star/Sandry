@@ -72,7 +72,7 @@ describe("cuentas de dinero", () => {
   });
 
   test("saldo inicial, transferencia, aporte y retiro de la dueña", async () => {
-    const mover = (p: Record<string, unknown>) => duena.rpc("mover_dinero", { p });
+    const mover = (p: Record<string, string | number>) => duena.rpc("mover_dinero", { p });
     expect((await mover({ tipo: "correccion", destino: cuentas.Caja, monto: 100 })).error).toBeNull();
     expect((await mover({ tipo: "correccion", destino: cuentas.Banco, monto: 500 })).error).toBeNull();
     await mover({ tipo: "transferencia", origen: cuentas.Caja, destino: cuentas.Banco, monto: 40, nota: "depósito" });
@@ -95,7 +95,7 @@ describe("cuentas de dinero", () => {
 
 describe("proveedores", () => {
   test("se crean con tipo y días de visita; RUC y nombre se validan", async () => {
-    const guardar = (p: Record<string, unknown>) => duena.rpc("guardar_proveedor", { p });
+    const guardar = (p: Record<string, string | number | number[]>) => duena.rpc("guardar_proveedor", { p });
     const r = await guardar({ nombre: "Coca-Cola (Arca)", tipo: "distribuidor", telefono: "0991234567", dias_visita: [2] });
     expect(r.error).toBeNull();
     distribuidor = r.data!;

@@ -56,6 +56,16 @@ export function formatoDolares(monto: Decimal.Value): string {
 }
 
 /** Fecha en formato dd/mm/aaaa, siempre con la hora de Ecuador. */
+/** Hora de Ecuador, 24 h (ej. 14:05). */
+export function formatoHora(fecha: Date | string): string {
+  return new Intl.DateTimeFormat("es-EC", { timeZone: ZONA_HORARIA, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(fecha));
+}
+
+/** Fecha de hoy en Ecuador como aaaa-mm-dd. */
+export function hoyEcuador(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: ZONA_HORARIA }).format(new Date());
+}
+
 export function formatoFecha(fecha: Date | string): string {
   const partes = new Intl.DateTimeFormat("en-GB", {
     timeZone: ZONA_HORARIA,

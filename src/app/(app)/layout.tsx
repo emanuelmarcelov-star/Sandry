@@ -5,7 +5,7 @@ import { MenuPrincipal, type OpcionMenu } from "@/components/menu-principal";
 import { VigilanteInactividad } from "@/components/vigilante-inactividad";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { puede, requerirUsuarioActivo } from "@/server/sesion";
-import { textos, textosCatalogo } from "@/lib/textos";
+import { textos, textosCatalogo, textosCompras, textosDinero, textosInventario } from "@/lib/textos";
 
 const t = textos.menu;
 
@@ -35,6 +35,11 @@ async function MenuDeLaPersona() {
 
   const opciones: OpcionMenu[] = [{ href: "/", etiqueta: t.inicio, icono: "Home" }];
   if (puede(usuario, "productos.ver")) opciones.push({ href: "/catalogo", etiqueta: textosCatalogo.menu, icono: "Package" });
+  if (puede(usuario, "compras.registrar") || puede(usuario, "compras.recibir")) {
+    opciones.push({ href: "/compras", etiqueta: textosCompras.menu, icono: "ShoppingCart" });
+  }
+  if (puede(usuario, "productos.ver")) opciones.push({ href: "/inventario", etiqueta: textosInventario.menu, icono: "ClipboardList" });
+  if (puede(usuario, "dinero.ver")) opciones.push({ href: "/dinero", etiqueta: textosDinero.menu, icono: "Wallet" });
   if (puede(usuario, "usuarios.gestionar")) {
     opciones.push({ href: "/usuarios", etiqueta: t.usuarios, icono: "Users" });
     opciones.push({ href: "/usuarios/roles", etiqueta: t.roles, icono: "ShieldCheck" });
