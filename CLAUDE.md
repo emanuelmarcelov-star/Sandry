@@ -71,6 +71,11 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
 - 28/10/2026 — Hosting: **Netlify** (plan gratis permite uso comercial) en lugar de Vercel,
   cuyo plan Hobby es solo no comercial. El código sigue siendo Next.js estándar.
 - 28/10/2026 — Dominio propio (para enviar correos a clientes con Resend): se decide en la fase 7.
+- 28/10/2026 — Correos (recuperar contraseña, invitaciones): **Gmail de la tienda con
+  contraseña de aplicación** como SMTP propio de Supabase (gratis). Resend + dominio queda
+  para cuando se envíen facturas.
+- 28/10/2026 — Pruebas automáticas contra un **segundo proyecto Supabase `sandry-pruebas`**,
+  nunca contra el de la tienda.
 - 28/10/2026 — Fase 7 (comprobantes/factura electrónica) se hace AL FINAL, después de la
   fase 8. El ticket interno sin valor tributario se entrega en la fase 5.
 

@@ -4,6 +4,11 @@ Estado: **aprobado** (28/10/2026), con estos cambios: hosting en **Netlify** (no
 dominio propio se decide en la fase 7, y la **fase 7 se hace al final**, después de la 8.
 Orden real: 1 → 2 → 3 → 4 → 5 → 6 → 8 → 7.
 
+| Fase | Estado |
+|---|---|
+| 1. Preparación | ✅ Aprobada el 28/10/2026 — https://storied-raindrop-2de6ba.netlify.app |
+| 2. Usuarios | En curso |
+
 ---
 
 ## 1. Plan por fases
