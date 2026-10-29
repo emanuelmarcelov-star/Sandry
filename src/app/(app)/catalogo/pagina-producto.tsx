@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { formatoDolares, formatoFecha } from "@/lib/dinero";
-import { cantidadConUnidad, costoAntesDeIva } from "@/lib/catalogo";
+import { cantidadConUnidad } from "@/lib/catalogo";
 import { ZONA_HORARIA } from "@/lib/dinero";
 import { AjusteStock } from "./ajuste-stock";
 
@@ -22,14 +22,13 @@ export async function PaginaProducto({ id }: { id?: string }) {
   const [categorias, producto, { data: ajustes }] = await Promise.all([
     listarCategorias(),
     id ? obtenerProducto(id, yo) : Promise.resolve(null),
-    supabase.from("ajustes").select("redondeo_precio, iva_compras").maybeSingle(),
+    supabase.from("ajustes").select("redondeo_precio").maybeSingle(),
   ]);
   if (id && !producto) notFound();
 
   const efectivos = valoresEfectivos(categorias);
   const arbol = categoriasEnArbol(categorias).filter((c) => c.activa || c.id === producto?.categoriaId);
   const verCostos = puede(yo, "costos.ver");
-  const ivaCompras = String(ajustes?.iva_compras ?? 15);
 
   const valores: ValoresIniciales | null = producto
     ? {
@@ -48,12 +47,7 @@ export async function PaginaProducto({ id }: { id?: string }) {
         ubicacion: producto.ubicacion,
         activo: producto.activo,
         fotoRuta: producto.fotoRuta ?? "",
-        // Se muestra lo de la factura (sin IVA); se guarda el costo real.
-        costoUnitario:
-          producto.costo && Number(producto.costo) > 0
-            ? costoAntesDeIva(producto.costo, producto.compraConIva, ivaCompras).toString()
-            : "",
-        compraConIva: producto.compraConIva,
+        costoUnitario: producto.costo && Number(producto.costo) > 0 ? producto.costo : "",
         stockInicial: "",
         presentaciones: producto.presentaciones.map((p) => ({
           id: p.id,
@@ -121,11 +115,8 @@ export async function PaginaProducto({ id }: { id?: string }) {
             paraCompra: p.paraCompra,
             esBase: p.esBase,
           }))}
-          compraConIva={producto.compraConIva}
-          ivaCompras={ivaCompras}
           puedeSumar={puede(yo, "compras.registrar")}
           puedeAjustar={puede(yo, "inventario.ajustar")}
-          puedeVerCostos={verCostos}
           movimientos={movimientos}
         />
       )}
@@ -139,7 +130,6 @@ export async function PaginaProducto({ id }: { id?: string }) {
           margen: efectivos[c.id].margen,
         }))}
         redondeo={String(ajustes?.redondeo_precio ?? "0.05")}
-        ivaCompras={ivaCompras}
         puedeCambiarPrecios={puede(yo, "precios.cambiar")}
         puedeVerCostos={verCostos}
         urlFotos={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/fotos-productos/`}

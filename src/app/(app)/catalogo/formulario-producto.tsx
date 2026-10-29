@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Aviso, Campo, Casilla, Selector } from "@/components/formulario";
 import { esquemaProducto, type DatosProducto } from "@/lib/esquemas/catalogo";
-import { costoReal, margenSobreCosto, precioSugerido, UNIDADES, type UnidadBase } from "@/lib/catalogo";
+import { margenSobreCosto, precioSugerido, UNIDADES, type UnidadBase } from "@/lib/catalogo";
 import { dec, formatoDolares, leerNumero } from "@/lib/dinero";
 import { achicarFoto } from "@/lib/imagen";
 import { textosCatalogo } from "@/lib/textos";
@@ -46,7 +46,6 @@ const NUEVO: DatosProducto = {
   activo: true,
   fotoRuta: "",
   costoUnitario: "",
-  compraConIva: false,
   stockInicial: "",
   presentaciones: [
     { nombre: "Unidad", factor: "1", precioVenta: "", paraVenta: true, paraCompra: true, esBase: true, codigos: "" },
@@ -57,7 +56,6 @@ export function FormularioProducto({
   valores,
   categorias,
   redondeo,
-  ivaCompras,
   puedeCambiarPrecios,
   puedeVerCostos,
   urlFotos,
@@ -65,7 +63,6 @@ export function FormularioProducto({
   valores: ValoresIniciales | null;
   categorias: CategoriaOpcion[];
   redondeo: string;
-  ivaCompras: string;
   puedeCambiarPrecios: boolean;
   puedeVerCostos: boolean;
   urlFotos: string;
@@ -86,15 +83,13 @@ export function FormularioProducto({
   const { fields, append, remove } = useFieldArray({ control, name: "presentaciones" });
   const e = formState.errors;
 
-  const [categoriaId, unidadBase, fotoRuta, costoTexto, compraConIva] = useWatch({
+  const [categoriaId, unidadBase, fotoRuta, costoTexto] = useWatch({
     control,
-    name: ["categoriaId", "unidadBase", "fotoRuta", "costoUnitario", "compraConIva"],
+    name: ["categoriaId", "unidadBase", "fotoRuta", "costoUnitario"],
   });
   const categoria = categorias.find((c) => c.id === categoriaId);
   const unidad = UNIDADES[unidadBase as UnidadBase];
-  const costoFactura = leerNumero(costoTexto ?? "");
-  // El margen y el sugerido se calculan con el costo REAL (con IVA si la compra lo tiene).
-  const costoBase = costoFactura ? costoReal(costoFactura, Boolean(compraConIva), ivaCompras) : null;
+  const costoBase = leerNumero(costoTexto ?? "");
 
   function cambiarCategoria(id: string) {
     setValue("categoriaId", id);
@@ -288,14 +283,6 @@ export function FormularioProducto({
               error={e.costoUnitario?.message}
             >
               <Input id="costoUnitario" inputMode="decimal" placeholder="0.00" {...register("costoUnitario")} />
-              <label className="flex items-center gap-3 text-base">
-                <Casilla {...register("compraConIva")} /> {t.compraConIva(ivaCompras)}
-              </label>
-              {costoBase && compraConIva && (
-                <p className="text-base font-medium">
-                  {t.costoReal}: {formatoDolares(costoBase)}
-                </p>
-              )}
             </Campo>
           )}
           {nuevo ? (

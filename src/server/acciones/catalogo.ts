@@ -21,7 +21,7 @@ import {
   type FilaProducto,
   type ProductoActual,
 } from "@/lib/excel/productos";
-import { costoReal, type TarifaIva } from "@/lib/catalogo";
+import type { TarifaIva } from "@/lib/catalogo";
 import type { Json } from "@/lib/supabase/tipos";
 import { puede, requerirPermiso } from "@/server/sesion";
 import { buscarProductos, itemsDeEtiqueta, listarCategorias, valoresEfectivos, type ItemEtiqueta } from "@/server/catalogo";
@@ -36,7 +36,6 @@ export async function guardarProducto(datos: DatosProducto): Promise<Resultado<{
   if (!revisado.success) return { ok: false, mensaje: "Revisa los datos marcados.", campos: erroresPorCampo(revisado.error) };
   const d = revisado.data;
   const supabase = await clienteServidor();
-  const ivaCompras = await tasaIvaCompras();
 
   const payload = {
     ...(d.id ? { id: d.id } : {}),
@@ -54,7 +53,6 @@ export async function guardarProducto(datos: DatosProducto): Promise<Resultado<{
     solo_mayores: d.soloMayores,
     ubicacion: d.ubicacion,
     activo: d.activo,
-    compra_con_iva: d.compraConIva,
     presentaciones: d.presentaciones.map((p, i) => ({
       ...(p.id ? { id: p.id } : {}),
       nombre: p.nombre,
@@ -66,10 +64,8 @@ export async function guardarProducto(datos: DatosProducto): Promise<Resultado<{
       orden: i,
       codigos: separarCodigos(p.codigos),
     })),
-    // El costo que se guarda es el REAL: lo de la factura + IVA si la compra lo tiene.
-    ...(puede(yo, "costos.ver") && d.costoUnitario.trim()
-      ? { costo_unitario: costoReal(numero(d.costoUnitario)!, d.compraConIva, ivaCompras).toString() }
-      : {}),
+    // Sin IVA: el costo es el que escribe la tienda (si algo lleva IVA, ella ya lo suma).
+    ...(puede(yo, "costos.ver") && d.costoUnitario.trim() ? { costo_unitario: numero(d.costoUnitario) } : {}),
     ...(!d.id && d.stockInicial.trim() ? { stock_inicial: numero(d.stockInicial) } : {}),
   };
 
@@ -83,29 +79,21 @@ export type TipoAjuste = "compra" | "conteo" | "merma" | "caducado" | "robo" | "
 
 /**
  * Ajuste rápido de stock desde la ficha del producto. La cantidad viene en la
- * presentación elegida (ej. 2 jabas) y se convierte a unidad base; el costo
- * viene por esa presentación y se guarda el costo REAL por unidad base.
+ * presentación elegida (ej. 2 jabas) y se convierte a unidad base. Al sumar,
+ * la base de datos usa el costo que ya tiene el producto (no se vuelve a pedir).
  */
 export async function ajustarStock(entrada: {
   productoId: string;
   tipo: TipoAjuste;
   cantidad: string;
   factor: string;
-  costo: string;
-  compraConIva: boolean;
   nota: string;
 }): Promise<Resultado<{ saldo: string }>> {
-  const yo = await requerirPermiso(entrada.tipo === "compra" ? "compras.registrar" : "inventario.ajustar");
+  await requerirPermiso(entrada.tipo === "compra" ? "compras.registrar" : "inventario.ajustar");
   const cantidad = leerNumero(entrada.cantidad);
   const factor = leerNumero(entrada.factor) ?? dec(1);
   if (!cantidad || cantidad.isNegative() || (entrada.tipo !== "conteo" && cantidad.isZero())) {
     return { ok: false, mensaje: "Escribe una cantidad mayor que 0.", campos: { cantidad: "Cantidad no válida." } };
-  }
-  let costo: string | null = null;
-  if (entrada.tipo === "compra" && entrada.costo.trim() && puede(yo, "costos.ver")) {
-    const c = leerNumero(entrada.costo);
-    if (!c || c.isNegative()) return { ok: false, mensaje: "El costo no es válido.", campos: { costo: "Costo no válido." } };
-    costo = costoReal(c, entrada.compraConIva, await tasaIvaCompras()).dividedBy(factor).toDecimalPlaces(4).toString();
   }
 
   const supabase = await clienteServidor();
@@ -113,19 +101,11 @@ export async function ajustarStock(entrada: {
     p_producto: entrada.productoId,
     p_tipo: entrada.tipo,
     p_cantidad: Number(cantidad.times(factor).toDecimalPlaces(3).toString()),
-    p_costo: costo === null ? undefined : Number(costo),
     p_nota: entrada.nota.trim(),
   });
   if (error) return { ok: false, mensaje: mensajeError(error, "No se pudo ajustar el stock.") };
   revalidatePath("/catalogo", "layout");
   return { ok: true, datos: { saldo: String(data) }, mensaje: "Stock actualizado." };
-}
-
-/** IVA de las compras configurado en Ajustes (por defecto 15%). */
-async function tasaIvaCompras(): Promise<string> {
-  const supabase = await clienteServidor();
-  const { data } = await supabase.from("ajustes").select("iva_compras").maybeSingle();
-  return String(data?.iva_compras ?? 15);
 }
 
 export async function sugerirPlu(): Promise<string | null> {
@@ -270,10 +250,9 @@ export async function guardarCategoria(datos: DatosCategoria): Promise<Resultado
 
 async function contextoImportacion(): Promise<{ contexto: ContextoImportacion; actuales: Map<string, ProductoActual> }> {
   const yo = await requerirPermiso("productos.editar");
-  const [categorias, productos, ivaCompras] = await Promise.all([
+  const [categorias, productos] = await Promise.all([
     listarCategorias(),
     buscarProductos(yo, { incluirInactivos: true, limite: 20000 }),
-    tasaIvaCompras(),
   ]);
   const actuales = new Map<string, ProductoActual>(
     productos.map((p) => [
@@ -284,7 +263,6 @@ async function contextoImportacion(): Promise<{ contexto: ContextoImportacion; a
   return {
     contexto: {
       puedeVerCostos: puede(yo, "costos.ver"),
-      ivaCompras,
       categorias: categorias.map((c) => ({ id: c.id, nombre: c.nombre, padreId: c.padreId })),
       productos: productos.map((p) => ({
         id: p.id,
@@ -397,7 +375,6 @@ export async function confirmarImportacion(entrada: {
     actuales,
     categoriaId: (c, s) => (c ? (ids.get(`${normalizarTexto(c)}|${normalizarTexto(s ?? "")}`) ?? null) : null),
     ivaDeCategoria: (id) => ((id && efectivos[id]?.tarifaIva) || "15") as TarifaIva,
-    ivaCompras: contexto.ivaCompras,
   });
   if (!productos.length) return { ok: false, mensaje: "No hay filas para guardar." };
 

@@ -4,27 +4,35 @@
  * servidor (que vuelve a revisar todo antes de guardar).
  */
 import { dec, leerNumero } from "@/lib/dinero";
-import { costoReal, UNIDADES, type TarifaIva, type UnidadBase } from "@/lib/catalogo";
+import { UNIDADES, type TarifaIva, type UnidadBase } from "@/lib/catalogo";
 
-/** Columnas de la hoja "Productos", en orden. */
+/**
+ * Columnas de la hoja "Productos", en orden: primero lo más sencillo
+ * (categoría, producto, costo, precio, stock) y al final lo opcional.
+ * `otros` son títulos de plantillas anteriores que se siguen aceptando.
+ */
 export const COLUMNAS_PRODUCTOS = [
-  { clave: "codigoBarras", titulo: "Código de barras", ancho: 18 },
-  { clave: "plu", titulo: "Código interno", ancho: 12 },
-  { clave: "nombre", titulo: "Nombre", ancho: 32 },
-  { clave: "marca", titulo: "Marca", ancho: 16 },
-  { clave: "categoria", titulo: "Categoría", ancho: 24 },
-  { clave: "subcategoria", titulo: "Subcategoría", ancho: 22 },
-  { clave: "unidadBase", titulo: "Unidad base", ancho: 12 },
-  { clave: "presentacion", titulo: "Presentación", ancho: 16 },
-  { clave: "factor", titulo: "Factor", ancho: 9 },
-  { clave: "precioCompra", titulo: "Precio de compra", ancho: 14 },
-  { clave: "precioVenta", titulo: "Precio de venta", ancho: 14 },
-  { clave: "compraConIva", titulo: "Compra con IVA", ancho: 11 },
-  { clave: "stockInicial", titulo: "Stock inicial", ancho: 12 },
-  { clave: "stockMinimo", titulo: "Stock mínimo", ancho: 12 },
-  { clave: "caducidad", titulo: "Fecha de caducidad", ancho: 16 },
-  { clave: "proveedor", titulo: "Proveedor", ancho: 20 },
+  { clave: "categoria", titulo: "Categoría", ancho: 24, otros: [] },
+  { clave: "nombre", titulo: "Producto", ancho: 32, otros: ["Nombre"] },
+  { clave: "precioCompra", titulo: "Costo", ancho: 11, otros: ["Precio de compra"] },
+  { clave: "precioVenta", titulo: "Precio de venta", ancho: 14, otros: [] },
+  { clave: "stockInicial", titulo: "Cuántos tengo", ancho: 13, otros: ["Stock inicial"] },
+  { clave: "stockMinimo", titulo: "Avisar si quedan menos de", ancho: 15, otros: ["Stock mínimo"] },
+  { clave: "marca", titulo: "Marca", ancho: 16, otros: [] },
+  { clave: "presentacion", titulo: "Presentación", ancho: 16, otros: [] },
+  { clave: "factor", titulo: "Factor", ancho: 9, otros: [] },
+  { clave: "unidadBase", titulo: "Se cuenta por", ancho: 12, otros: ["Unidad base"] },
+  { clave: "plu", titulo: "Código corto", ancho: 12, otros: ["Código interno"] },
+  { clave: "codigoBarras", titulo: "Código de barras", ancho: 18, otros: [] },
+  { clave: "subcategoria", titulo: "Subcategoría", ancho: 22, otros: [] },
+  { clave: "caducidad", titulo: "Fecha de caducidad", ancho: 16, otros: [] },
+  { clave: "proveedor", titulo: "Proveedor", ancho: 20, otros: [] },
 ] as const;
+
+/** Letra de Excel de una columna (A, B, C...) según su clave. */
+export function letraDeColumna(clave: ClaveColumna): string {
+  return String.fromCharCode(65 + COLUMNAS_PRODUCTOS.findIndex((c) => c.clave === clave));
+}
 
 export type ClaveColumna = (typeof COLUMNAS_PRODUCTOS)[number]["clave"];
 export type FilaProducto = { fila: number } & Record<ClaveColumna, string>;
@@ -35,8 +43,6 @@ export type ContextoImportacion = {
   categorias: CategoriaContexto[];
   productos: ProductoContexto[];
   puedeVerCostos: boolean;
-  /** IVA de las compras en % (Ajustes). */
-  ivaCompras?: string;
 };
 
 export type Coincidencia =
@@ -62,8 +68,6 @@ export type FilaRevisada = {
     esBase: boolean;
     precioCompra: string | null;
     precioVenta: string | null;
-    /** null = no se dijo (se mantiene lo que tenía el producto). */
-    compraConIva: boolean | null;
     stock: string | null;
     stockMinimo: string | null;
     categoria: string | null;
@@ -106,15 +110,6 @@ const UNIDADES_ACEPTADAS: Record<string, UnidadBase> = {
   kilo: "kilo", kilos: "kilo", kg: "kilo", kilogramo: "kilo",
   litro: "litro", litros: "litro", l: "litro", lt: "litro", lts: "litro",
 };
-
-/** «Compra con IVA»: sí / no (también acepta 15% y 0% de plantillas viejas). */
-function leerSiNo(texto: string): boolean | null | "invalido" {
-  const t = normalizarTexto(texto).replace(/\s/g, "");
-  if (t === "") return null;
-  if (["si", "s", "x", "1", "15", "iva", "coniva", "true", "verdadero"].includes(t)) return true;
-  if (["no", "n", "0", "siniva", "false", "falso"].includes(t) || t.startsWith("exent")) return false;
-  return "invalido";
-}
 
 export function normalizarPlu(texto: string): string {
   return texto.trim().replace(/^0+(?=\d)/, "");
@@ -250,15 +245,9 @@ export function revisarFilas(
       avisos.push("No tienes permiso de costos: el precio de compra no se guardará.");
       precioCompra = null;
     }
-    const compraConIva = leerSiNo(f.compraConIva);
-    if (compraConIva === "invalido") errores.push("«Compra con IVA»: escribe sí o no.");
-
     if (!precioVenta) avisos.push("Sin precio de venta.");
-    if (precioCompra && precioVenta) {
-      const real = costoReal(precioCompra, compraConIva === true, contexto.ivaCompras ?? "15");
-      if (dec(precioVenta).lt(real)) {
-        avisos.push(`El precio de venta es menor que el costo real (${real.toFixed(2)}): se vendería a pérdida.`);
-      }
+    if (precioCompra && precioVenta && dec(precioVenta).lt(precioCompra)) {
+      avisos.push("El precio de venta es menor que el costo: se vendería a pérdida.");
     }
 
     // Categoría y subcategoría
@@ -303,7 +292,6 @@ export function revisarFilas(
             esBase,
             precioCompra,
             precioVenta,
-            compraConIva: compraConIva === "invalido" ? null : compraConIva,
             stock,
             stockMinimo,
             categoria,
@@ -337,10 +325,11 @@ export function mapearEncabezados(titulos: string[]): Partial<Record<ClaveColumn
   const mapa: Partial<Record<ClaveColumna, number>> = {};
   titulos.forEach((t, i) => {
     const n = normalizarTexto(t);
-    const col = COLUMNAS_PRODUCTOS.find((c) => normalizarTexto(c.titulo) === n);
-    if (col) mapa[col.clave] = i;
-    // Plantillas descargadas antes del 29/10/2026 tenían la columna «IVA».
-    else if (n === "iva" && mapa.compraConIva === undefined) mapa.compraConIva = i;
+    // Se acepta el título actual y los de plantillas anteriores.
+    const col = COLUMNAS_PRODUCTOS.find(
+      (c) => normalizarTexto(c.titulo) === n || c.otros.some((o: string) => normalizarTexto(o) === n),
+    );
+    if (col && mapa[col.clave] === undefined) mapa[col.clave] = i;
   });
   return mapa;
 }
@@ -364,7 +353,6 @@ export type ProductoActual = {
   soloMayores: boolean;
   ubicacion: string;
   activo: boolean;
-  compraConIva?: boolean;
   presentaciones: {
     id: string;
     nombre: string;
@@ -385,8 +373,6 @@ export type OpcionesArmado = {
   categoriaId: (categoria: string | null, subcategoria: string | null) => string | null;
   /** IVA por defecto de una categoría (oculto; solo por si algún día se factura). */
   ivaDeCategoria: (categoriaId: string | null) => TarifaIva;
-  /** IVA de las compras en % (Ajustes): se suma al costo si la compra tiene IVA. */
-  ivaCompras?: string;
 };
 
 type PresentacionPayload = {
@@ -443,8 +429,6 @@ export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesAr
     let costoUnitario: string | null = null;
     let stockTotal = dec(0);
     let categoriaId = actual?.categoriaId ?? null;
-    // ¿Se compra con IVA? Lo dice la primera fila que lo indique; si no, lo que ya tenía.
-    const compraConIva = filas.find((f) => f.datos!.compraConIva !== null)?.datos!.compraConIva ?? actual?.compraConIva ?? false;
     let plu = actual?.plu ?? null;
     let stockMinimo = actual?.stockMinimo ?? "0";
     let caducidad = actual?.manejaCaducidad ?? false;
@@ -473,11 +457,8 @@ export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesAr
         p.codigos.push(d.codigo);
       }
       if (costoUnitario === null && d.precioCompra !== null) {
-        // Costo REAL por unidad base: (precio de compra + IVA si lo tiene) ÷ factor.
-        costoUnitario = costoReal(d.precioCompra, d.compraConIva ?? compraConIva, opciones.ivaCompras ?? "15")
-          .dividedBy(p.factor)
-          .toDecimalPlaces(4)
-          .toString();
+        // Costo por unidad base: costo de la presentación ÷ factor (jaba $9 ÷ 12 = $0.75).
+        costoUnitario = dec(d.precioCompra).dividedBy(p.factor).toDecimalPlaces(4).toString();
       }
       if (d.stock !== null) stockTotal = stockTotal.plus(dec(d.stock).times(p.factor));
       if (d.categoria) categoriaId = opciones.categoriaId(d.categoria, d.subcategoria) ?? categoriaId;
@@ -505,7 +486,6 @@ export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesAr
       foto_ruta: actual?.fotoRuta ?? null,
       unidad_base: unidadBase,
       tarifa_iva: actual?.tarifaIva ?? opciones.ivaDeCategoria(categoriaId),
-      compra_con_iva: compraConIva,
       stock_minimo: stockMinimo,
       maneja_caducidad: caducidad,
       retornable: actual?.retornable ?? false,

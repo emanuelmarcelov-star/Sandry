@@ -15,10 +15,9 @@ import { cn } from "cn";
 const t = textosCatalogo.importar;
 
 /** Columnas que se pueden corregir en la vista previa (las demás se ven igual). */
-const EDITABLES: ClaveColumna[] = [
-  "codigoBarras", "plu", "nombre", "marca", "categoria", "subcategoria", "unidadBase",
-  "presentacion", "factor", "precioCompra", "precioVenta", "compraConIva", "stockInicial", "stockMinimo",
-];
+const EDITABLES: ClaveColumna[] = COLUMNAS_PRODUCTOS.map((c) => c.clave).filter(
+  (c) => c !== "caducidad" && c !== "proveedor",
+);
 
 export function Importador() {
   const router = useRouter();

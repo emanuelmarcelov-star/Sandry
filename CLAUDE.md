@@ -65,7 +65,7 @@ Open Food Facts · decimal.js · Vitest + Playwright.
   Las fases 4 y 5 (compras, ventas, ajustes) deben usar esa misma función.
 - Costos en `producto_costos` (RLS `costos.ver`). Lecturas del servidor en `src/server/catalogo.ts`.
 - Búsqueda: `buscar_productos()` (pg_trgm + unaccent, texto en `productos.texto_busqueda`).
-- Cálculos (margen sobre costo, sugerido, IVA, GTIN): `src/lib/catalogo.ts`.
+- Cálculos (margen sobre costo, sugerido, GTIN): `src/lib/catalogo.ts`.
 - Excel: revisión/armado puro y compartido en `src/lib/excel/productos.ts`; plantilla en
   `src/server/excel/plantilla.ts` (hoja «Productos» vacía + «Ejemplos» que NO se importa).
 - Impresión: todo lo imprimible va dentro de `.zona-impresion` (CSS en `globals.css`) y
@@ -123,13 +123,15 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
 - 28/10/2026 — Catálogo desde cero (sin lista previa). Códigos de barras internos: EAN-13
   con prefijo **29** (2 + 9 + 10 dígitos de secuencia + verificador); los prefijos 20–28
   quedan libres para las balanzas de peso variable (fase 5).
-- 29/10/2026 — **IVA solo en las compras, no en la venta.** La tienda está en un lugar muy
-  remoto: el precio de venta lo pone la dueña libremente (mucho más que costo + IVA). En la
-  pantalla NO se muestra IVA de venta (productos, categorías). El costo real = costo de
-  compra × (1 + IVA de compras) cuando se marca «La compra tiene IVA»; si no, el costo tal
-  cual. Tasa en `ajustes.iva_compras` (15%). Cada producto recuerda `compra_con_iva` para
-  sugerirlo en las compras (fase 4). Las columnas `tarifa_iva` siguen en la BD, ocultas, por
-  si algún día la tienda factura (fase 7).
+- 29/10/2026 — **Sin IVA en ninguna pantalla** (ni venta ni compra). La tienda está en un
+  lugar muy remoto y pone el precio de venta libremente. Si algo lleva IVA, la dueña hace la
+  cuenta y escribe el costo final. Quedan en la BD, sin usar, `tarifa_iva`,
+  `productos.compra_con_iva` y `ajustes.iva_compras` (por si algún día se factura, fase 7).
+- 29/10/2026 — **Sumar stock no pide costo**: usa el costo que ya tiene el producto
+  (`ajustar_stock` toma `costo_promedio` si no llega costo). Aplicar lo mismo en compras rápidas.
+- 29/10/2026 — **Excel sencillo**: columnas en orden Categoría, Producto, Costo, Precio de
+  venta, Cuántos tengo (verdes) y luego lo opcional (gris). Se aceptan títulos de plantillas
+  anteriores (`otros` en `COLUMNAS_PRODUCTOS`).
 - 28/10/2026 — Fase 7 (comprobantes/factura electrónica) se hace AL FINAL, después de la
   fase 8. El ticket interno sin valor tributario se entrega en la fase 5.
 

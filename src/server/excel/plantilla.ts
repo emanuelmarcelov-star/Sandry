@@ -1,6 +1,6 @@
 import "server-only";
 import ExcelJS from "exceljs";
-import { COLUMNAS_PRODUCTOS } from "@/lib/excel/productos";
+import { COLUMNAS_PRODUCTOS, letraDeColumna } from "@/lib/excel/productos";
 
 type Categoria = { id: string; nombre: string; padreId: string | null };
 
@@ -52,29 +52,27 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
     ["Plantilla de Sandry", true],
     ["", false],
     ["Cómo usarla", true],
-    ["1. Llena la hoja «Productos»: una fila por cada presentación (unidad, paquete, jaba, libra...). Mira la hoja «Ejemplos» para guiarte.", false],
-    ["2. Si un producto se vende de varias formas, repite el nombre en varias filas (una por presentación).", false],
-    ["3. Las columnas con flechita tienen una lista para elegir (categoría, unidad, IVA, cuentas...).", false],
-    ["4. Guarda el archivo y súbelo en Sandry → Catálogo → Importar. Antes de guardar verás una vista previa.", false],
+    ["1. Llena la hoja «Productos». Basta con las 5 primeras columnas: Categoría, Producto, Costo, Precio de venta y Cuántos tengo.", false],
+    ["2. Las columnas grises son opcionales: déjalas vacías si no las necesitas.", false],
+    ["3. Mira la hoja «Ejemplos» para guiarte (esa hoja NO se importa).", false],
+    ["4. Guarda el archivo y súbelo en Sandry → Catálogo → Importar Excel. Antes de guardar verás una vista previa.", false],
     ["", false],
-    ["Columnas de «Productos»", true],
-    ["Código de barras: el número debajo de las barras del producto o de la caja. Si no tiene, déjalo vacío.", false],
-    ["Código interno: un número corto de 1 a 4 cifras para productos sin código (ej. 10 = pan). Opcional.", false],
-    ["Nombre, Marca: como quieras que aparezca en la tienda.", false],
-    ["Categoría y Subcategoría: elige de la lista. Si escribes una nueva, Sandry te preguntará si la crea.", false],
-    ["Unidad base: cómo se cuenta el stock: unidad, libra, kilo o litro.", false],
-    ["Presentación: Unidad, Funda x100, Paquete x6, Jaba x12, Libra... (vacío = la unidad base).", false],
-    ["Factor: cuántas unidades base trae la presentación. Jaba x12 = 12. Unidad = 1. Papas: 1 unidad ≈ 0.4 libras.", false],
-    ["Precio de compra: lo que pagas por ESA presentación (ej. la jaba completa), como dice la factura o el recibo.", false],
-    ["Compra con IVA: «sí» si a ese precio de compra hay que sumarle el IVA (15%); «no» si no lleva IVA. Sandry guarda el costo real.", false],
-    ["Precio de venta: lo que cobras por ESA presentación (lo pones tú, libremente).", false],
-    ["Stock inicial: cuántas tienes de ESA presentación (ej. 2 jabas). Se convierte solo a unidades.", false],
-    ["Stock mínimo: desde cuántas unidades base quieres un aviso de stock bajo.", false],
+    ["Lo principal", true],
+    ["Categoría: elige de la lista (o escribe una nueva y Sandry te preguntará si la crea).", false],
+    ["Producto: el nombre como quieras verlo en la tienda (ej. Coca-Cola 3 litros).", false],
+    ["Costo: lo que te cuesta. Precio de venta: a cuánto lo vendes.", false],
+    ["Cuántos tengo: el stock de hoy. Avisar si quedan menos de: para el aviso de stock bajo.", false],
     ["Puedes escribir los números con coma o con punto (1,50 o 1.50) y con o sin $.", false],
+    ["", false],
+    ["Opcional (columnas grises)", true],
+    ["Marca. Presentación y Factor: si lo vendes por jaba, funda o paquete, pon una fila más con el mismo producto,", false],
+    ["   la presentación (ej. Jaba x12) y el factor (cuántas unidades trae: 12). El costo y el precio son de esa presentación.", false],
+    ["Se cuenta por: unidad (si no pones nada), libra, kilo o litro.", false],
+    ["Código corto: un número de 1 a 4 cifras para lo que no tiene código de barras (ej. 10 = pan).", false],
+    ["Código de barras: el número debajo de las barras. Subcategoría: casi nunca hace falta.", false],
     ["", false],
     ["Hojas «Compras» y «Gastos»", true],
     ["Se podrán importar cuando estén listas las fases de compras (fase 4) y gastos (fase 6).", false],
-    ["La hoja «Categorías» es solo de referencia: muestra las categorías que existen hoy en Sandry.", false],
   ] as const;
   textos.forEach(([texto, negrita], i) => {
     const celda = inst.getCell(`A${i + 1}`);
@@ -92,40 +90,55 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
     hijas.map((c) => c.nombre),
     ["unidad", "libra", "kilo", "litro"],
     ["sí", "no"],
-    ["sí", "no"],
     CUENTAS_POR_DEFECTO,
     GASTOS_POR_DEFECTO,
   ];
-  columnasListas.forEach((valores, c) => valores.forEach((v, f) => (listas.getCell(f + 1, c + 1).value = v)));
+  columnasListas.forEach((valores, c) => valores.forEach((v, fila) => (listas.getCell(fila + 1, c + 1).value = v)));
   const rango = (col: string, n: number) => `Listas!$${col}$1:$${col}$${Math.max(n, 1)}`;
 
   // ---------------------------------------------------------------- Productos
   // La hoja «Productos» va vacía (lista para llenar). Los ejemplos van en su
-  // propia hoja para que nunca se importen por error.
+  // propia hoja para que nunca se importen por error. Lo principal va primero
+  // (verde) y lo opcional después (gris).
+  const columnas = COLUMNAS_PRODUCTOS.map((c) => ({ titulo: c.titulo, ancho: c.ancho }));
+  const PRINCIPALES = 5;
+  const pintarOpcionales = (hoja: ExcelJS.Worksheet) => {
+    for (let c = PRINCIPALES + 1; c <= columnas.length; c++) {
+      const celda = hoja.getRow(1).getCell(c);
+      celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF94A3B8" } };
+    }
+  };
   const prod = libro.addWorksheet("Productos");
-  encabezado(prod, COLUMNAS_PRODUCTOS.map((c) => ({ titulo: c.titulo, ancho: c.ancho })));
+  encabezado(prod, columnas);
+  pintarOpcionales(prod);
   const ejemplosHoja = libro.addWorksheet("Ejemplos", { properties: { tabColor: { argb: "FFB45309" } } });
-  encabezado(ejemplosHoja, COLUMNAS_PRODUCTOS.map((c) => ({ titulo: c.titulo, ancho: c.ancho })));
-  const ejemplos = [
-    ["7861001234565", "", "Coca-Cola 500 ml", "Coca-Cola", "Bebidas", "Gaseosas", "unidad", "Unidad", 1, 0.75, 1, "sí", 24, 12, "", "Coca-Cola"],
-    ["17861001234562", "", "Coca-Cola 500 ml", "Coca-Cola", "Bebidas", "Gaseosas", "unidad", "Jaba x12", 12, 9, 10.8, "sí", 0, "", "", "Coca-Cola"],
-    ["", "25", "Papa chola", "", "Frutas y verduras", "Tubérculos (papas)", "libra", "Libra", 1, 0.3, 0.45, "no", 50, 10, "", "Mercado"],
-    ["", "25", "Papa chola", "", "Frutas y verduras", "Tubérculos (papas)", "libra", "Unidad", 0.4, "", 0.2, "no", "", "", "", ""],
-    ["", "10", "Pan de sal", "", "Panadería", "", "unidad", "Unidad", 1, 0.1, 0.15, "no", 40, 20, "", "Panadería"],
-    ["", "30", "Caramelo de leche", "", "Golosinas y snacks", "Caramelos", "unidad", "Unidad", 1, "", 0.05, "sí", "", "", "", ""],
-    ["", "30", "Caramelo de leche", "", "Golosinas y snacks", "Caramelos", "unidad", "Funda x100", 100, 2, 4, "sí", 3, 50, "", "Mayorista"],
+  encabezado(ejemplosHoja, columnas);
+  pintarOpcionales(ejemplosHoja);
+
+  type Ejemplo = Partial<Record<(typeof COLUMNAS_PRODUCTOS)[number]["clave"], string | number>>;
+  const ejemplos: Ejemplo[] = [
+    { categoria: "Bebidas", nombre: "Coca-Cola 3 litros", precioCompra: 2.6, precioVenta: 3.5, stockInicial: 12, stockMinimo: 4 },
+    { categoria: "Bebidas", nombre: "Coca-Cola 500 ml", precioCompra: 0.75, precioVenta: 1, stockInicial: 24, stockMinimo: 12, marca: "Coca-Cola" },
+    { categoria: "Bebidas", nombre: "Coca-Cola 500 ml", precioCompra: 9, precioVenta: 10.8, marca: "Coca-Cola", presentacion: "Jaba x12", factor: 12 },
+    { categoria: "Panadería", nombre: "Pan de sal", precioCompra: 0.1, precioVenta: 0.15, stockInicial: 40, plu: "10" },
+    { categoria: "Frutas y verduras", nombre: "Papa chola", precioCompra: 0.3, precioVenta: 0.45, stockInicial: 50, unidadBase: "libra", plu: "25" },
+    { categoria: "Golosinas y snacks", nombre: "Caramelo de leche", precioVenta: 0.05, plu: "30" },
+    { categoria: "Golosinas y snacks", nombre: "Caramelo de leche", precioCompra: 2, precioVenta: 4, stockInicial: 3, presentacion: "Funda x100", factor: 100, plu: "30" },
   ];
-  ejemplos.forEach((e) => ejemplosHoja.addRow(e));
-  ejemplosHoja.getCell("Q1").value = "← Solo ejemplos para guiarte: esta hoja NO se importa. Llena la hoja «Productos».";
-  ejemplosHoja.getCell("Q1").font = { bold: true, color: { argb: "FFB45309" } };
-  ejemplosHoja.getColumn(17).width = 60;
-  lista(prod, "E", rango("A", raices.length), "Elige una categoría de la lista o escribe una nueva.");
-  lista(prod, "F", rango("B", hijas.length), "Elige una subcategoría de la lista o escribe una nueva.");
-  lista(prod, "G", rango("C", 4), "Usa unidad, libra, kilo o litro.");
-  lista(prod, "L", rango("D", 2), "Escribe sí o no.");
-  for (const col of ["I", "J", "K", "M", "N"]) prod.getColumn(col).numFmt = "0.00##";
-  prod.getColumn("A").numFmt = "@";
-  prod.getColumn("B").numFmt = "@";
+  for (const e of ejemplos) ejemplosHoja.addRow(COLUMNAS_PRODUCTOS.map((c) => e[c.clave] ?? ""));
+  const notaCol = columnas.length + 2;
+  ejemplosHoja.getRow(1).getCell(notaCol).value = "← Solo ejemplos para guiarte: esta hoja NO se importa. Llena la hoja «Productos».";
+  ejemplosHoja.getRow(1).getCell(notaCol).font = { bold: true, color: { argb: "FFB45309" } };
+  ejemplosHoja.getColumn(notaCol).width = 60;
+
+  lista(prod, letraDeColumna("categoria"), rango("A", raices.length), "Elige una categoría de la lista o escribe una nueva.");
+  lista(prod, letraDeColumna("subcategoria"), rango("B", hijas.length), "Elige una subcategoría de la lista o escribe una nueva.");
+  lista(prod, letraDeColumna("unidadBase"), rango("C", 4), "Usa unidad, libra, kilo o litro.");
+  for (const clave of ["precioCompra", "precioVenta", "stockInicial", "stockMinimo", "factor"] as const) {
+    prod.getColumn(letraDeColumna(clave)).numFmt = "0.00##";
+  }
+  prod.getColumn(letraDeColumna("codigoBarras")).numFmt = "@";
+  prod.getColumn(letraDeColumna("plu")).numFmt = "@";
 
   // ---------------------------------------------------------------- Compras
   const compras = libro.addWorksheet("Compras");
@@ -134,8 +147,8 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
     { titulo: "Con factura", ancho: 11 }, { titulo: "Cuenta de dinero", ancho: 22 }, { titulo: "Código o nombre del producto", ancho: 30 },
     { titulo: "Presentación", ancho: 16 }, { titulo: "Cantidad", ancho: 10 }, { titulo: "Costo", ancho: 10 },
   ]);
-  lista(compras, "D", rango("E", 2), "Escribe sí o no.");
-  lista(compras, "E", rango("F", CUENTAS_POR_DEFECTO.length), "Elige una cuenta de la lista.");
+  lista(compras, "D", rango("D", 2), "Escribe sí o no.");
+  lista(compras, "E", rango("E", CUENTAS_POR_DEFECTO.length), "Elige una cuenta de la lista.");
   compras.getColumn("A").numFmt = "dd/mm/yyyy";
 
   // ---------------------------------------------------------------- Gastos
@@ -144,8 +157,8 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
     { titulo: "Fecha", ancho: 12 }, { titulo: "Categoría", ancho: 24 }, { titulo: "Descripción", ancho: 34 },
     { titulo: "Monto", ancho: 10 }, { titulo: "Cuenta de dinero", ancho: 22 },
   ]);
-  lista(gastos, "B", rango("G", GASTOS_POR_DEFECTO.length), "Elige una categoría de gasto.");
-  lista(gastos, "E", rango("F", CUENTAS_POR_DEFECTO.length), "Elige una cuenta de la lista.");
+  lista(gastos, "B", rango("F", GASTOS_POR_DEFECTO.length), "Elige una categoría de gasto.");
+  lista(gastos, "E", rango("E", CUENTAS_POR_DEFECTO.length), "Elige una cuenta de la lista.");
   gastos.getColumn("A").numFmt = "dd/mm/yyyy";
 
   // ---------------------------------------------------------------- Categorías (referencia)

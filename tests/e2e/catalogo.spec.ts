@@ -19,8 +19,8 @@ test("crear un producto con presentaciones: margen, pérdida y precio sugerido",
   await page.getByLabel("Categoría").selectOption({ label: "Bebidas › Gaseosas" });
   await page.getByLabel("Apodos para buscarlo").fill("colita, coca");
   await page.getByLabel("Costo de compra por unidad").fill("0.75");
-  // No hay selector de IVA de venta: el precio lo pone la tienda libremente.
-  await expect(page.getByLabel("IVA", { exact: true })).toHaveCount(0);
+  // Sin IVA en ninguna parte: ni de venta ni de compra.
+  await expect(page.getByText(/IVA/)).toHaveCount(0);
   await page.getByLabel("Stock inicial (unidad)").fill("24");
 
   await page.locator("#pres-0-precio").fill("1.00");
@@ -36,21 +36,15 @@ test("crear un producto con presentaciones: margen, pérdida y precio sugerido",
   await page.getByRole("button", { name: "Usar" }).nth(1).click();
   await expect(page.locator("#pres-1-precio")).toHaveValue("10.80");
 
-  // Si la compra tiene IVA, el costo real sube 15% y el margen se recalcula.
-  await page.getByLabel("La compra tiene IVA (se suma 15%)").check();
-  await expect(page.getByText("Costo real con IVA: $0.86")).toBeVisible(); // 0.75 × 1.15 = 0.8625
-  await expect(page.getByText("Margen: 15.9% · Ganancia: $0.14")).toBeVisible();
-
   await page.getByRole("button", { name: "Guardar producto" }).click();
   await expect(page).toHaveURL(/\/catalogo$/);
   const fila = page.getByRole("listitem").filter({ hasText: "Coca-Cola 500 ml" });
   await expect(fila).toContainText("$1.00");
   await expect(fila).toContainText("24 unidades");
 
-  // Al volver a abrirlo, se ve el costo de la factura y la casilla marcada.
+  // Al volver a abrirlo, el costo es el mismo que se escribió.
   await fila.click();
   await expect(page.getByLabel("Costo de compra por unidad")).toHaveValue("0.75");
-  await expect(page.getByLabel("La compra tiene IVA (se suma 15%)")).toBeChecked();
 });
 
 test("ajustar stock desde la ficha: sumar jabas, corregir conteo y sacar", async ({ page }) => {
@@ -62,8 +56,8 @@ test("ajustar stock desde la ficha: sumar jabas, corregir conteo y sacar", async
   await page.getByLabel("¿En qué presentación?").selectOption({ label: "Jaba x12 (12 unidades)" });
   await page.getByLabel("Cantidad").fill("2");
   await expect(page.getByText("= 24 unidades")).toBeVisible();
-  await page.getByLabel("Costo de cada jaba x12").fill("9");
-  await expect(page.getByText("Costo real con IVA: $10.35")).toBeVisible();
+  // No se vuelve a pedir el costo: se usa el que ya tiene el producto.
+  await expect(page.getByRole("dialog").getByLabel(/Costo/)).toHaveCount(0);
   await page.getByLabel("Nota").fill("distribuidor");
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(page.getByText("Stock actualizado. Ahora hay 48 unidades.")).toBeVisible();
@@ -107,10 +101,12 @@ test("importar desde la plantilla de Excel, corrigiendo un error en pantalla", a
   expect(libro.worksheets.map((h) => h.name)).toEqual(["Instrucciones", "Listas", "Productos", "Ejemplos", "Compras", "Gastos", "Categorias"]);
   const hoja = libro.getWorksheet("Productos")!;
   [
-    ["", "10", "Pan de sal", "", "Panadería", "", "unidad", "Unidad", 1, 0.1, 0.15, "0%", 40, 20],
-    ["", "30", "Caramelo de leche", "", "Golosinas y snacks", "Caramelos", "unidad", "Unidad", 1, "", 0.05, "15%", "", ""],
-    ["", "30", "Caramelo de leche", "", "Golosinas y snacks", "Caramelos", "unidad", "Funda x100", 100, "2,00", 4, "15%", 3, 50],
-    ["", "", "Papa chola", "", "Frutas y verduras", "Tubérculos (papas)", "libra", "Libra", 1, 0.3, "abc", "0%", 50, 10],
+    // Categoría, Producto, Costo, Precio de venta, Cuántos tengo, Avisar si quedan menos de,
+    // Marca, Presentación, Factor, Se cuenta por, Código corto
+    ["Panadería", "Pan de sal", 0.1, 0.15, 40, 20, "", "", "", "", "10"],
+    ["Golosinas y snacks", "Caramelo de leche", "", 0.05, "", "", "", "Unidad", 1, "", "30"],
+    ["Golosinas y snacks", "Caramelo de leche", "2,00", 4, 3, 50, "", "Funda x100", 100, "", "30"],
+    ["Frutas y verduras", "Papa chola", 0.3, "abc", 50, 10, "", "", "", "libra"],
   ].forEach((valores, i) => (hoja.getRow(i + 2).values = valores));
   const archivo = Buffer.from(await libro.xlsx.writeBuffer());
   void request;

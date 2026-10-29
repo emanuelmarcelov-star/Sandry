@@ -7,9 +7,9 @@ import { ClipboardCheck, PackageMinus, PackagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Aviso, Campo, Casilla, Selector } from "@/components/formulario";
-import { cantidadConUnidad, costoReal, type UnidadBase } from "@/lib/catalogo";
-import { formatoDolares, leerNumero } from "@/lib/dinero";
+import { Aviso, Campo, Selector } from "@/components/formulario";
+import { cantidadConUnidad, type UnidadBase } from "@/lib/catalogo";
+import { leerNumero } from "@/lib/dinero";
 import { textos, textosCatalogo } from "@/lib/textos";
 import { ajustarStock, type TipoAjuste } from "@/server/acciones/catalogo";
 
@@ -18,28 +18,25 @@ const t = textosCatalogo.stock;
 type Presentacion = { nombre: string; factor: string; paraCompra: boolean; esBase: boolean };
 type Modo = "sumar" | "corregir" | "sacar";
 
-/** Botones para sumar, corregir o sacar stock desde la ficha del producto. */
+/**
+ * Botones para sumar, corregir o sacar stock desde la ficha del producto.
+ * Al sumar solo se pide la cantidad: se usa el costo que ya tiene el producto.
+ */
 export function AjusteStock({
   productoId,
   stock,
   unidad,
   presentaciones,
-  compraConIva,
-  ivaCompras,
   puedeSumar,
   puedeAjustar,
-  puedeVerCostos,
   movimientos,
 }: {
   productoId: string;
   stock: string;
   unidad: UnidadBase;
   presentaciones: Presentacion[];
-  compraConIva: boolean;
-  ivaCompras: string;
   puedeSumar: boolean;
   puedeAjustar: boolean;
-  puedeVerCostos: boolean;
   movimientos: { fecha: string; texto: string; saldo: string }[];
 }) {
   const [modo, setModo] = useState<Modo | null>(null);
@@ -90,9 +87,6 @@ export function AjusteStock({
           stock={stock}
           unidad={unidad}
           presentaciones={presentaciones}
-          compraConIva={compraConIva}
-          ivaCompras={ivaCompras}
-          puedeVerCostos={puedeVerCostos}
           onCerrar={() => setModo(null)}
         />
       )}
@@ -106,9 +100,6 @@ function DialogoAjuste({
   stock,
   unidad,
   presentaciones,
-  compraConIva,
-  ivaCompras,
-  puedeVerCostos,
   onCerrar,
 }: {
   modo: Modo;
@@ -116,9 +107,6 @@ function DialogoAjuste({
   stock: string;
   unidad: UnidadBase;
   presentaciones: Presentacion[];
-  compraConIva: boolean;
-  ivaCompras: string;
-  puedeVerCostos: boolean;
   onCerrar: () => void;
 }) {
   const router = useRouter();
@@ -126,8 +114,6 @@ function DialogoAjuste({
   const base = presentaciones.find((p) => p.esBase)!;
   const [indice, setIndice] = useState(0);
   const [cantidad, setCantidad] = useState("");
-  const [costo, setCosto] = useState("");
-  const [conIva, setConIva] = useState(compraConIva);
   const [motivo, setMotivo] = useState<TipoAjuste>("merma");
   const [nota, setNota] = useState("");
   const [error, setError] = useState<string>();
@@ -136,9 +122,6 @@ function DialogoAjuste({
   const presentacion = modo === "corregir" ? base : (opciones[indice] ?? base);
   const n = leerNumero(cantidad);
   const enBase = n ? n.times(presentacion.factor) : null;
-  const costoN = leerNumero(costo);
-  const costoRealPres = costoN ? costoReal(costoN, conIva, ivaCompras) : null;
-
   const titulo = modo === "sumar" ? t.sumar : modo === "corregir" ? t.corregir : t.sacar;
 
   function guardar() {
@@ -149,8 +132,6 @@ function DialogoAjuste({
         tipo: modo === "sumar" ? "compra" : modo === "corregir" ? "conteo" : motivo,
         cantidad,
         factor: presentacion.factor,
-        costo,
-        compraConIva: conIva,
         nota,
       });
       if (!r.ok) return setError(r.mensaje);
@@ -208,21 +189,6 @@ function DialogoAjuste({
           </Campo>
           {enBase && !presentacion.esBase && modo !== "corregir" && (
             <p className="text-muted-foreground">= {cantidadConUnidad(enBase, unidad)}</p>
-          )}
-
-          {modo === "sumar" && puedeVerCostos && (
-            <Campo id="aj-costo" etiqueta={`${t.costoDe} ${presentacion.nombre.toLowerCase()}`} ayuda={t.ayudaCosto} opcional>
-              <Input id="aj-costo" inputMode="decimal" placeholder="0.00" value={costo} onChange={(e) => setCosto(e.target.value)} />
-              <label className="flex items-center gap-3">
-                <Casilla checked={conIva} onChange={(e) => setConIva(e.target.checked)} />
-                {textosCatalogo.formulario.compraConIva(ivaCompras)}
-              </label>
-              {costoRealPres && conIva && (
-                <p className="font-medium">
-                  {textosCatalogo.formulario.costoReal}: {formatoDolares(costoRealPres)}
-                </p>
-              )}
-            </Campo>
           )}
 
           <Campo id="aj-nota" etiqueta={t.nota} opcional>

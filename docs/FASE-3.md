@@ -14,12 +14,10 @@ Enlace de la app: **https://storied-raindrop-2de6ba.netlify.app** → menú → 
 - **Presentaciones**: unidad, funda, paquete, jaba, libra… cada una con su factor
   (jaba x12 = 12), su **precio propio** y sus códigos de barras (el de la caja también).
   El stock siempre se guarda en la unidad base.
-- **IVA solo en las compras** (cambio del 29/10/2026): el precio de venta lo pone tu mamá
-  libremente, sin IVA de por medio. Junto al costo hay una casilla **«La compra tiene IVA
-  (se suma 15%)»**: si la marcas, el **costo real** es el de la factura + 15%. El 15% se
-  cambia en **Ajustes** si algún día cambia la ley.
+- **Sin IVA** (decisión del 29/10/2026): el costo y el precio de venta se escriben tal cual.
+  Si algo lleva IVA, se hace la cuenta aparte y se escribe el costo final.
 - **Precios**:
-  - El **margen sobre el costo real** se calcula solo. Si vendes a pérdida, se pone **en rojo**.
+  - El **margen sobre el costo** se calcula solo. Si vendes a pérdida, se pone **en rojo**.
   - El **precio sugerido** sale del margen objetivo de la categoría y se redondea a $0.05.
   - Hay **historial** de cada cambio de precio y de costo.
 - **Costos privados**: solo los ve la administradora (y la encargada de inventario).
@@ -43,8 +41,8 @@ Enlace de la app: **https://storied-raindrop-2de6ba.netlify.app** → menú → 
 - **Búsqueda tolerante**: «cocacola», «coca 3l», «pilsner» (mal escrito), «AZUCAR»,
   por apodo, por código o por código corto.
 
-Pruebas automáticas: 89 de cálculos (margen, precio sugerido, costo con IVA, códigos,
-Excel), 54 de reglas de la base de datos y 24 de recorridos en el navegador. Todas pasan.
+Pruebas automáticas: 83 de cálculos (margen, precio sugerido, códigos, Excel), 58 de
+reglas de la base de datos y 25 de recorridos en el navegador. Todas pasan.
 
 ---
 
@@ -59,23 +57,23 @@ Entra con la cuenta de tu mamá (administradora).
    - Apodos: `colita, coca`.
    - Costo de compra por unidad: `0.75`. Stock inicial: `24`.
    - En la presentación **Unidad**: precio `1.00`. Debajo verás «Margen: 33.3%».
-   - Marca **«La compra tiene IVA»**: verás «Costo real con IVA: $0.86» y el margen baja
-     a 15.9%. Desmárcala si esa compra no lleva IVA.
    - Si tiene código de barras, escríbelo o escanéalo y prueba **Buscar datos por código**.
    - **Agregar presentación** → `Jaba x12`, factor `12`, precio `8`. Saldrá **en rojo
      «¡A pérdida!»** porque la jaba te cuesta $9.00. Toca **Usar** junto al sugerido.
    - **Guardar producto**.
 3. **Buscar**: en Productos escribe `colita`. Debe aparecer la Coca-Cola.
    **Ajustar el stock**: toca la Coca-Cola. Arriba está el recuadro **Stock** con tres botones:
-   - **Sumar (llegó mercadería)**: elige `Jaba x12`, cantidad `2` (verás «= 24 unidades»),
-     y si quieres el costo de cada jaba.
+   - **Sumar (llegó mercadería)**: elige `Jaba x12`, cantidad `2` (verás «= 24 unidades»).
+     No se vuelve a pedir el costo: se usa el que ya tiene el producto.
    - **Corregir conteo**: escribe cuántas hay realmente; la app registra la diferencia.
    - **Sacar (daño, consumo…)**: elige el motivo (se dañó, se caducó, consumo de la casa…).
    Debajo verás los últimos movimientos, con fecha, hora y lo que queda.
 4. **Producto por libra**: crea `Papa chola`, «Se cuenta por» **Libra**, precio por
    libra `0.45`, y agrega la presentación `Unidad` con factor `0.4` (una papa ≈ 0.4 lb).
 5. **Excel**: Catálogo → **Importar Excel** → **Descargar plantilla**. Ábrela, mira la
-   hoja «Ejemplos» y llena 3 o 4 productos en la hoja «Productos». Escribe a propósito
+   hoja «Ejemplos» y llena 3 o 4 productos en la hoja «Productos». Basta con las 5 primeras
+   columnas (verdes): Categoría, Producto, Costo, Precio de venta y Cuántos tengo. Las
+   grises (marca, presentación, códigos, subcategoría…) son opcionales. Escribe a propósito
    una letra en un precio. Súbela: verás la fila en rojo con el error. Corrígelo en la
    tabla y toca **Guardar en el catálogo**.
 6. **Etiquetas**: Catálogo → **Etiquetas**. Verás los productos «por reimprimir». Elige
@@ -92,10 +90,10 @@ compras desde el celular, kardex y alertas).
 
 ## Notas
 
-- **IVA de venta**: ya no se muestra. Internamente se guarda un valor por categoría,
-  oculto, solo por si algún día la tienda se registra para facturar (fase 7).
-- **Excel**: la columna «IVA» ahora se llama **«Compra con IVA»** (sí / no). Las
-  plantillas que ya hayas descargado siguen funcionando.
+- **IVA**: no se usa en ninguna pantalla. Internamente queda un valor oculto por si algún
+  día la tienda se registra para facturar (fase 7).
+- **Excel**: las plantillas que ya hayas descargado siguen funcionando (si tenían una
+  columna de IVA, simplemente se ignora).
 - **Fotos**: se achican solas antes de subirlas (≈100 KB cada una) para que el plan
   gratuito de Supabase alcance por años.
 - **Sin impresora todavía**: las etiquetas se pueden guardar como PDF. En la fase 5 te

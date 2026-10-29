@@ -75,25 +75,6 @@ export function costoPorUnidadBase(costoPresentacion: Decimal.Value, factor: Dec
   return dec(costoPresentacion).dividedBy(factor).toDecimalPlaces(4);
 }
 
-// --------------------------------------------------------------- costo con IVA de compra
-
-/**
- * Costo REAL: lo que se pagó, más el IVA si la compra lo tiene.
- * $1.00 con IVA de 15% → $1.15. Sin IVA → $1.00.
- */
-export function costoReal(costoCompra: Decimal.Value, compraConIva: boolean, ivaCompras: Decimal.Value = 15): Dec {
-  const c = dec(costoCompra);
-  if (!compraConIva) return c;
-  return c.times(dec(1).plus(dec(ivaCompras).dividedBy(100))).toDecimalPlaces(4);
-}
-
-/** Lo contrario: a partir del costo real, lo que dice la factura antes del IVA. */
-export function costoAntesDeIva(costoRealGuardado: Decimal.Value, compraConIva: boolean, ivaCompras: Decimal.Value = 15): Dec {
-  const c = dec(costoRealGuardado);
-  if (!compraConIva) return c;
-  return c.dividedBy(dec(1).plus(dec(ivaCompras).dividedBy(100))).toDecimalPlaces(4);
-}
-
 // --------------------------------------------------------------- precios
 
 /**

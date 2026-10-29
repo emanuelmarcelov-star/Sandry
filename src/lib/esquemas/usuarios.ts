@@ -104,7 +104,6 @@ export const esquemaAjustes = z.object({
     .number<string>()
     .min(0, "No puede ser negativo.")
     .max(100, "Máximo 100%."),
-  ivaCompras: z.coerce.number<string>().min(0, "No puede ser negativo.").max(100, "Máximo 100%."),
   redondeoPrecio: z.coerce.number<string>().gt(0, "Debe ser mayor que 0.").max(10, "Máximo $10."),
 });
 export type DatosAjustes = z.input<typeof esquemaAjustes>;

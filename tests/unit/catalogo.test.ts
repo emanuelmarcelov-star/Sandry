@@ -1,9 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   aUnidadBase,
-  costoAntesDeIva,
   costoPorUnidadBase,
-  costoReal,
   desglosarIva,
   digitoVerificadorGtin,
   esCodigoInterno,
@@ -89,30 +87,6 @@ describe("precios y margen (sobre el costo)", () => {
 
   test("precio sugerido redondeado: costo $0.62 + 35% = 0.837 → $0.85", () => {
     expect(precioSugerido("0.62", 35).toString()).toBe("0.85");
-  });
-});
-
-describe("costo real con IVA de compra", () => {
-  test("compra con IVA: $1.00 + 15% = $1.15", () => {
-    expect(costoReal("1.00", true, 15).toString()).toBe("1.15");
-  });
-
-  test("compra sin IVA: el costo queda igual", () => {
-    expect(costoReal("1.00", false, 15).toString()).toBe("1");
-  });
-
-  test("jaba de $9.00 con IVA → $10.35; por unidad $0.8625", () => {
-    expect(costoReal("9", true).dividedBy(12).toString()).toBe("0.8625");
-  });
-
-  test("se puede volver al costo de la factura para editarlo", () => {
-    expect(costoAntesDeIva("1.15", true, 15).toString()).toBe("1");
-    expect(costoAntesDeIva("0.8625", true, 15).toString()).toBe("0.75");
-    expect(costoAntesDeIva("0.75", false, 15).toString()).toBe("0.75");
-  });
-
-  test("si cambia la tasa (ej. 12%)", () => {
-    expect(costoReal("2", true, 12).toString()).toBe("2.24");
   });
 });
 

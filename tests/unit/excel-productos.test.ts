@@ -33,12 +33,12 @@ function fila(datos: Partial<FilaProducto>): FilaProducto {
 describe("revisar filas del Excel", () => {
   test("producto nuevo correcto, tolerante con coma decimal, tildes y mayúsculas", () => {
     const { filas, categoriasNuevas } = revisarFilas(
-      [fila({ nombre: "Arroz Gustadina 1 lb", categoria: "VIVERES", unidadBase: "Unidad", precioCompra: "0,50", precioVenta: "$0.65", compraConIva: "no", stockInicial: "20" })],
+      [fila({ nombre: "Arroz Gustadina 1 lb", categoria: "VIVERES", unidadBase: "Unidad", precioCompra: "0,50", precioVenta: "$0.65", stockInicial: "20" })],
       contexto,
     );
     expect(filas[0].errores).toEqual([]);
     expect(filas[0].coincidencia.tipo).toBe("nuevo");
-    expect(filas[0].datos).toMatchObject({ precioCompra: "0.5", precioVenta: "0.65", compraConIva: false, stock: "20", esBase: true, factor: "1" });
+    expect(filas[0].datos).toMatchObject({ precioCompra: "0.5", precioVenta: "0.65", stock: "20", esBase: true, factor: "1" });
     expect(categoriasNuevas).toEqual([]);
   });
 
@@ -69,7 +69,7 @@ describe("revisar filas del Excel", () => {
         fila({ nombre: "Jaba Pilsener", presentacion: "Jaba x12" }),
         fila({ nombre: "X", factor: "-2", presentacion: "Caja" }),
         fila({ nombre: "Y", precioVenta: "uno" }),
-        fila({ nombre: "Z", compraConIva: "quizás" }),
+        fila({ nombre: "Z", stockInicial: "dos" }),
         fila({ nombre: "W", unidadBase: "metro" }),
         fila({ nombre: "V", plu: "12345" }),
       ],
@@ -79,7 +79,7 @@ describe("revisar filas del Excel", () => {
     expect(filas[1].errores[0]).toContain("Falta el factor");
     expect(filas[2].errores).toContain("El factor debe ser un número mayor que 0.");
     expect(filas[3].errores).toContain("El precio de venta: «uno» no es un número.");
-    expect(filas[4].errores).toContain("«Compra con IVA»: escribe sí o no.");
+    expect(filas[4].errores).toContain("El stock inicial: «dos» no es un número.");
     expect(filas[5].errores[0]).toContain("Unidad base no válida");
     expect(filas[6].errores).toContain("El código interno debe ser un número de 1 a 4 cifras.");
   });
@@ -141,9 +141,23 @@ describe("utilidades", () => {
     expect(mapa).toEqual({ nombre: 0, codigoBarras: 1, precioVenta: 2 });
   });
 
-  test("plantillas viejas con la columna «IVA» siguen funcionando", () => {
-    expect(mapearEncabezados(["Nombre", "IVA"])).toEqual({ nombre: 0, compraConIva: 1 });
-    expect(mapearEncabezados(["Nombre", "Compra con IVA"])).toEqual({ nombre: 0, compraConIva: 1 });
+  test("plantillas anteriores (otros títulos y columna IVA) siguen funcionando", () => {
+    expect(mapearEncabezados(["Nombre", "Precio de compra", "Stock inicial", "IVA", "Código interno"])).toEqual({
+      nombre: 0,
+      precioCompra: 1,
+      stockInicial: 2,
+      plu: 4,
+    });
+  });
+
+  test("la plantilla nueva empieza por lo sencillo", () => {
+    expect(COLUMNAS_PRODUCTOS.slice(0, 5).map((c) => c.titulo)).toEqual([
+      "Categoría",
+      "Producto",
+      "Costo",
+      "Precio de venta",
+      "Cuántos tengo",
+    ]);
   });
 
   test("celdas de Excel a texto", () => {
@@ -221,29 +235,12 @@ describe("armar lo que se guarda", () => {
     ]);
   });
 
-  test("«Compra con IVA = sí» guarda el costo REAL (factura + 15%)", () => {
+  test("sin IVA: el costo de la caja se reparte tal cual entre sus unidades", () => {
     const { filas } = revisarFilas(
-      [fila({ nombre: "Detergente 1 kg", presentacion: "Caja x12", factor: "12", precioCompra: "24", compraConIva: "sí", precioVenta: "3" })],
+      [fila({ nombre: "Detergente 1 kg", presentacion: "Caja x12", factor: "12", precioCompra: "24", precioVenta: "3" })],
       contexto,
     );
-    const p = armarImportacion(filas, { ...opciones, ivaCompras: "15" }).productos[0];
-    expect(p.costo_unitario).toBe("2.3"); // (24 × 1.15) / 12
-    expect(p.compra_con_iva).toBe(true);
-  });
-
-  test("«Compra con IVA = no» deja el costo como está", () => {
-    const { filas } = revisarFilas([fila({ nombre: "Huevos", precioCompra: "0.12", compraConIva: "no", precioVenta: "0.20" })], contexto);
-    const p = armarImportacion(filas, { ...opciones, ivaCompras: "15" }).productos[0];
-    expect(p.costo_unitario).toBe("0.12");
-    expect(p.compra_con_iva).toBe(false);
-  });
-
-  test("avisa pérdida comparando con el costo real (con IVA)", () => {
-    const { filas } = revisarFilas(
-      [fila({ nombre: "Aceite", precioCompra: "2.00", compraConIva: "sí", precioVenta: "2.25" })],
-      { ...contexto, ivaCompras: "15" },
-    );
-    expect(filas[0].avisos.join(" ")).toContain("costo real (2.30)");
+    expect(armarImportacion(filas, opciones).productos[0].costo_unitario).toBe("2"); // 24 / 12
   });
 
   test("las filas con errores no se guardan", () => {

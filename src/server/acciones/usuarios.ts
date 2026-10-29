@@ -130,7 +130,6 @@ export async function guardarAjustes(datos: DatosAjustes | SalidaAjustes): Promi
   const { error } = await supabase.rpc("actualizar_ajustes", {
     p_minutos_inactividad: revisado.data.minutosInactividad,
     p_descuento_max: revisado.data.descuentoMaximo,
-    p_iva_compras: revisado.data.ivaCompras,
     p_redondeo_precio: revisado.data.redondeoPrecio,
   });
   if (error) return { ok: false, mensaje: mensajeError(error) };
