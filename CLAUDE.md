@@ -146,6 +146,15 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
   productos existentes), y solo para ver «Resumen» y «Movimientos» (kardex 90 días; solo con
   `costos.ver`). Las ventas NO van en «Salidas» (las registra la caja). Cuando existan
   ventas, gastos e ingresos (fases 4–6), agregarlos a «Resumen» y como hojas de solo lectura.
+- 29/10/2026 — **Fase 3 aprobada.** Fase 4 completa: proveedores, cuentas de dinero,
+  compras (suelta, distribuidor con contado/crédito), viaje de compras en el celular (sin
+  señal no se pierde nada), kardex, alertas, lista sugerida, **pedido al preventista**,
+  **caducidades (lotes)**, **envases retornables** y **conteo de inventario**.
+- 29/10/2026 — **Transporte del viaje = gasto de la tienda** (categoría Transporte). No se
+  prorratea en el costo.
+- 29/10/2026 — Cuentas de dinero iniciales: **Caja, Banco, Deuna y Dinero personal de la
+  dueña**. Pagar algo desde «Dinero personal» = aporte de la dueña (esa cuenta acumula en
+  negativo lo que ella puso; un retiro de la dueña la sube).
 - 28/10/2026 — Fase 7 (comprobantes/factura electrónica) se hace AL FINAL, después de la
   fase 8. El ticket interno sin valor tributario se entrega en la fase 5.
 

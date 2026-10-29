@@ -32,6 +32,20 @@ export function anonimo(): SupabaseClient<Database> {
 /** Borra TODAS las cuentas del proyecto de pruebas (y con ellas perfiles, PIN, etc.). */
 export async function vaciarProyecto() {
   const a = admin();
+  // Abastecimiento e inventario (fase 4): primero lo que apunta a productos y cuentas.
+  await a.from("conteos").delete().not("id", "is", null);
+  await a.from("movimientos_envases").delete().gte("id", 0);
+  await a.from("envases").delete().not("id", "is", null);
+  await a.from("pedidos").delete().not("id", "is", null);
+  await a.from("pagos_proveedor").delete().gte("id", 0);
+  await a.from("lotes").delete().gte("id", 0);
+  await a.from("compras").delete().not("id", "is", null);
+  await a.from("gastos").delete().not("id", "is", null);
+  await a.from("viajes").delete().not("id", "is", null);
+  await a.from("movimientos_dinero").delete().gte("id", 0);
+  await a.from("proveedores").delete().not("id", "is", null);
+  await a.from("cuentas_dinero").delete().not("nombre", "in", '("Caja","Banco","Deuna","Dinero personal de la dueña")');
+  await a.from("cuentas_dinero").update({ activa: true }).not("id", "is", null);
   // Catálogo: borra productos (y con ellos presentaciones, códigos, stock, kardex...)
   // y las categorías creadas por pruebas; deja las categorías por defecto.
   await a.from("productos").delete().not("id", "is", null);
@@ -56,14 +70,18 @@ export async function vaciarProyecto() {
   }
   await a.from("bitacora").delete().gte("id", 0);
   await a.from("intentos_recuperar_correo").delete().gte("id", 0);
-  // Permisos por defecto de la cajera (por si una prueba anterior los cambió).
-  await a.from("rol_permisos").delete().eq("rol_id", "cajera");
-  await a.from("rol_permisos").insert(
-    ["ventas.vender", "ventas.ver_propias", "caja.abrir_cerrar", "clientes.gestionar", "productos.ver"].map((permiso) => ({
-      rol_id: "cajera",
-      permiso,
-    })),
-  );
+  // Permisos por defecto (por si una prueba anterior los cambió).
+  const porDefecto: Record<string, string[]> = {
+    cajera: ["ventas.vender", "ventas.ver_propias", "caja.abrir_cerrar", "clientes.gestionar", "productos.ver"],
+    inventario: [
+      "productos.ver", "costos.ver", "compras.registrar", "compras.recibir", "inventario.contar", "inventario.ajustar",
+      "proveedores.gestionar",
+    ],
+  };
+  for (const [rol, permisos] of Object.entries(porDefecto)) {
+    await a.from("rol_permisos").delete().eq("rol_id", rol);
+    await a.from("rol_permisos").insert(permisos.map((permiso) => ({ rol_id: rol, permiso })));
+  }
 }
 
 /** Crea una cuenta como si se hubiera registrado (el disparador crea su perfil). */
