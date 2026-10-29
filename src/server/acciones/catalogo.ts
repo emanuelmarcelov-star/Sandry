@@ -11,7 +11,12 @@ import { dec, leerNumero } from "@/lib/dinero";
 import {
   armarImportacion,
   buscarCategoria,
+  COLUMNAS_COMPRAS,
   COLUMNAS_PRODUCTOS,
+  COLUMNAS_SALIDAS,
+  DESPLAZAMIENTO_COMPRAS,
+  DESPLAZAMIENTO_SALIDAS,
+  filaVacia,
   mapearEncabezados,
   normalizarPlu,
   normalizarTexto,
@@ -278,7 +283,31 @@ async function contextoImportacion(): Promise<{ contexto: ContextoImportacion; a
 
 export type LecturaExcel = { filas: FilaProducto[]; contexto: ContextoImportacion; avisos: string[] };
 
-/** Lee la hoja «Productos» del archivo subido. Todavía no guarda nada. */
+/** Lee una hoja con encabezados en la fila 1 y la convierte en filas de producto. */
+function leerHoja(
+  hoja: ExcelJS.Worksheet,
+  columnas: typeof COLUMNAS_PRODUCTOS | typeof COLUMNAS_COMPRAS | typeof COLUMNAS_SALIDAS,
+  desplazamiento = 0,
+): FilaProducto[] | null {
+  const titulos: string[] = [];
+  hoja.getRow(1).eachCell({ includeEmpty: true }, (celda, col) => (titulos[col - 1] = textoDeCelda(celda.value)));
+  const mapa = mapearEncabezados(titulos, columnas);
+  if (mapa.nombre === undefined && mapa.codigoBarras === undefined) return null;
+
+  const filas: FilaProducto[] = [];
+  hoja.eachRow({ includeEmpty: false }, (fila, numeroFila) => {
+    if (numeroFila === 1) return;
+    const base = filaVacia(numeroFila + desplazamiento);
+    for (const c of columnas) {
+      const col = mapa[c.clave];
+      if (col !== undefined) (base as Record<string, unknown>)[c.clave] = textoDeCelda(fila.getCell(col + 1).value);
+    }
+    filas.push(base);
+  });
+  return filas;
+}
+
+/** Lee las hojas «Productos», «Compras» y «Salidas» del archivo subido. Todavía no guarda nada. */
 export async function leerExcelProductos(formulario: FormData): Promise<Resultado<LecturaExcel>> {
   const { contexto } = await contextoImportacion();
   const archivo = formulario.get("archivo");
@@ -291,38 +320,37 @@ export async function leerExcelProductos(formulario: FormData): Promise<Resultad
   } catch {
     return { ok: false, mensaje: "No se pudo leer el archivo. Debe ser un Excel .xlsx (no .xls ni .csv)." };
   }
-  const hoja = libro.worksheets.find((h) => normalizarTexto(h.name) === "productos") ?? libro.worksheets[0];
-  if (!hoja) return { ok: false, mensaje: "El archivo no tiene hojas." };
+  const hojaProductos = libro.worksheets.find((h) => normalizarTexto(h.name) === "productos") ?? libro.worksheets[0];
+  const hojaCompras = libro.worksheets.find((h) => normalizarTexto(h.name) === "compras");
+  const hojaSalidas = libro.worksheets.find((h) => normalizarTexto(h.name) === "salidas");
+  if (!hojaProductos) return { ok: false, mensaje: "El archivo no tiene hojas." };
 
-  const titulos: string[] = [];
-  hoja.getRow(1).eachCell({ includeEmpty: true }, (celda, col) => (titulos[col - 1] = textoDeCelda(celda.value)));
-  const mapa = mapearEncabezados(titulos);
-  if (mapa.nombre === undefined && mapa.codigoBarras === undefined) {
-    return { ok: false, mensaje: "No encontré las columnas «Nombre» o «Código de barras» en la primera fila. Usa la plantilla de Sandry." };
+  const productos = leerHoja(hojaProductos, COLUMNAS_PRODUCTOS);
+  if (productos === null && !hojaCompras) {
+    return { ok: false, mensaje: "No encontré la columna «Producto» en la primera fila. Usa la plantilla de Sandry." };
   }
+  // En «Compras» solo cuentan las filas donde se escribió cuántos entraron.
+  const compras = (hojaCompras ? (leerHoja(hojaCompras, COLUMNAS_COMPRAS, DESPLAZAMIENTO_COMPRAS) ?? []) : [])
+    .filter((f) => f.stockInicial.trim() !== "")
+    .map((f) => ({ ...f, deCompras: true }));
+  // En «Salidas», igual: solo las filas donde se escribió cuántos salieron.
+  const salidas = (hojaSalidas ? (leerHoja(hojaSalidas, COLUMNAS_SALIDAS, DESPLAZAMIENTO_SALIDAS) ?? []) : [])
+    .filter((f) => f.stockInicial.trim() !== "")
+    .map((f) => ({ ...f, deSalidas: true }));
 
-  const filas: FilaProducto[] = [];
-  hoja.eachRow({ includeEmpty: false }, (fila, numeroFila) => {
-    if (numeroFila === 1) return;
-    const valores = Object.fromEntries(
-      COLUMNAS_PRODUCTOS.map((c) => {
-        const col = mapa[c.clave];
-        return [c.clave, col === undefined ? "" : textoDeCelda(fila.getCell(col + 1).value)];
-      }),
-    ) as Record<(typeof COLUMNAS_PRODUCTOS)[number]["clave"], string>;
-    if (Object.values(valores).some((v) => v.trim() !== "")) filas.push({ fila: numeroFila, ...valores });
-  });
-  if (!filas.length) return { ok: false, mensaje: "La hoja «Productos» está vacía." };
+  const filas = [
+    ...(productos ?? []).filter((f) => COLUMNAS_PRODUCTOS.some((c) => f[c.clave].trim() !== "")),
+    ...compras,
+    ...salidas,
+  ];
+  if (!filas.length) {
+    return {
+      ok: false,
+      mensaje: "No hay nada para cargar: la hoja «Productos» está vacía y no escribiste cuántos entraron ni cuántos salieron.",
+    };
+  }
   if (filas.length > 5000) return { ok: false, mensaje: "Son más de 5.000 filas. Divide el archivo en partes." };
-
-  const avisos: string[] = [];
-  for (const nombre of ["compras", "gastos"]) {
-    const otra = libro.worksheets.find((h) => normalizarTexto(h.name) === nombre);
-    if (otra && otra.actualRowCount > 1) {
-      avisos.push(`La hoja «${otra.name}» tiene datos: se podrá importar cuando esté lista la fase de ${nombre}. Por ahora solo se cargan productos.`);
-    }
-  }
-  return { ok: true, datos: { filas, contexto, avisos } };
+  return { ok: true, datos: { filas, contexto, avisos: [] } };
 }
 
 /** Guarda lo revisado. Vuelve a revisar todo en el servidor con datos frescos. */
@@ -355,15 +383,10 @@ export async function confirmarImportacion(entrada: {
     for (const f of revisadas) {
       const d = f.datos;
       if (!d?.categoria) continue;
-      const clave = `${normalizarTexto(d.categoria)}|${normalizarTexto(d.subcategoria ?? "")}`;
+      const clave = normalizarTexto(d.categoria);
       if (ids.has(clave)) continue;
-      const madre =
-        buscarCategoria(categorias, d.categoria, null) ?? buscarCategoria(categorias, d.categoria) ?? (await crear(d.categoria, null));
-      let destino = madre;
-      if (d.subcategoria) {
-        destino = buscarCategoria(categorias, d.subcategoria, madre.id) ?? (await crear(d.subcategoria, madre.id));
-      }
-      ids.set(clave, destino.id);
+      const categoria = buscarCategoria(categorias, d.categoria) ?? (await crear(d.categoria, null));
+      ids.set(clave, categoria.id);
     }
   } catch (e) {
     return { ok: false, mensaje: e instanceof Error ? e.message : "No se pudieron crear las categorías." };
@@ -373,7 +396,7 @@ export async function confirmarImportacion(entrada: {
   const { productos } = armarImportacion(revisadas, {
     unirParecidos: new Set(entrada.unirParecidos),
     actuales,
-    categoriaId: (c, s) => (c ? (ids.get(`${normalizarTexto(c)}|${normalizarTexto(s ?? "")}`) ?? null) : null),
+    categoriaId: (c) => (c ? (ids.get(normalizarTexto(c)) ?? null) : null),
     ivaDeCategoria: (id) => ((id && efectivos[id]?.tarifaIva) || "15") as TarifaIva,
   });
   if (!productos.length) return { ok: false, mensaje: "No hay filas para guardar." };
@@ -381,8 +404,11 @@ export async function confirmarImportacion(entrada: {
   const { data, error } = await supabase.rpc("importar_productos", { p_productos: productos as unknown as Json });
   if (error) return { ok: false, mensaje: mensajeError(error, "No se pudo importar.") };
   revalidatePath("/catalogo", "layout");
-  const r = data as { creados: number; actualizados: number; stock_corregido?: number };
-  const corregidos = r.stock_corregido ? ` Se corrigió el stock de ${r.stock_corregido}.` : "";
+  const r = data as { creados: number; actualizados: number; stock_corregido?: number; compras?: number; salidas?: number };
+  const corregidos =
+    (r.compras ? ` Se sumó lo que entró a ${r.compras} producto(s).` : "") +
+    (r.salidas ? ` Se restaron ${r.salidas} salida(s).` : "") +
+    (r.stock_corregido ? ` Se corrigió el stock de ${r.stock_corregido}.` : "");
   return {
     ok: true,
     datos: { nuevos: r.creados, actualizados: r.actualizados },

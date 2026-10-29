@@ -290,7 +290,7 @@ export const textosCatalogo = {
   },
   categorias: {
     titulo: "Categorías",
-    ayuda: "Organiza los productos. El margen objetivo (para el precio sugerido) se hereda de la categoría madre si no se pone.",
+    ayuda: "Organiza los productos (Bebidas, Botiquín, Ferretería…). El margen objetivo sirve para el precio sugerido.",
     nueva: "Nueva categoría",
     subcategoria: "Agregar subcategoría",
     nombre: "Nombre",

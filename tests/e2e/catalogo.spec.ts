@@ -16,7 +16,7 @@ test("crear un producto con presentaciones: margen, pérdida y precio sugerido",
   await page.goto("/catalogo/nuevo");
   await page.getByLabel("Nombre").fill("Coca-Cola 500 ml");
   await page.getByLabel("Marca").fill("Coca-Cola");
-  await page.getByLabel("Categoría").selectOption({ label: "Bebidas › Gaseosas" });
+  await page.getByLabel("Categoría").selectOption({ label: "Bebidas" });
   await page.getByLabel("Apodos para buscarlo").fill("colita, coca");
   await page.getByLabel("Costo de compra por unidad").fill("0.75");
   // Sin IVA en ninguna parte: ni de venta ni de compra.
@@ -98,7 +98,7 @@ test("importar desde la plantilla de Excel, corrigiendo un error en pantalla", a
   const libro = new ExcelJS.Workbook();
   const cuerpo = await respuesta.body();
   await libro.xlsx.load(cuerpo.buffer.slice(cuerpo.byteOffset, cuerpo.byteOffset + cuerpo.byteLength) as ArrayBuffer);
-  expect(libro.worksheets.map((h) => h.name)).toEqual(["Instrucciones", "Listas", "Productos", "Ejemplos", "Compras", "Gastos", "Categorias"]);
+  expect(libro.worksheets.map((h) => h.name)).toEqual(["Instrucciones", "Listas", "Productos", "Compras", "Salidas", "Ejemplos", "Categorias"]);
   const hoja = libro.getWorksheet("Productos")!;
   [
     // Categoría, Producto, Costo, Precio de venta, Cuántos tengo, Avisar si quedan menos de,
@@ -160,15 +160,37 @@ test("hoja de códigos: genera códigos internos para lo que no tiene", async ({
   for (const c of await codigos.all()) expect(await c.getAttribute("data-codigo")).toMatch(/^29\d{11}$/);
 });
 
-test("descargar mis productos, editarlos en Excel y volver a importarlos sin duplicar", async ({ page }) => {
+test("descargar el Excel, anotar lo que entró y salió, y volver a importarlo sin duplicar", async ({ page }) => {
   await page.goto("/catalogo");
   const descarga = page.waitForEvent("download");
   await page.getByRole("link", { name: "Descargar Excel" }).click();
   const archivo = await descarga;
-  expect(archivo.suggestedFilename()).toMatch(/^productos-sandry-\d{2}-\d{2}-\d{4}\.xlsx$/);
+  expect(archivo.suggestedFilename()).toMatch(/^sandry-\d{2}-\d{2}-\d{4}\.xlsx$/);
 
   const libro = new ExcelJS.Workbook();
   await libro.xlsx.readFile(await archivo.path());
+  expect(libro.worksheets.map((h) => h.name)).toEqual([
+    "Instrucciones", "Listas", "Productos", "Compras", "Salidas", "Resumen", "Movimientos", "Ejemplos", "Categorias",
+  ]);
+  // «Resumen» y «Movimientos» muestran cómo está la tienda (solo para ver).
+  const resumen: string[] = [];
+  libro.getWorksheet("Resumen")!.eachRow((f) => resumen.push(String(f.getCell(1).value ?? "")));
+  expect(resumen).toContain("Lo que costó lo que hay en la tienda");
+  const movimientos: string[] = [];
+  libro.getWorksheet("Movimientos")!.eachRow((f) => movimientos.push(`${f.getCell(2).value} | ${f.getCell(3).value}`));
+  expect(movimientos).toContain("Coca-Cola 500 ml | Llegó mercadería");
+
+  // «Compras» trae cada producto: solo se escribe cuántos entraron (2 jabas de Coca-Cola).
+  libro.getWorksheet("Compras")!.eachRow((fila) => {
+    if (fila.getCell(2).value === "Coca-Cola 500 ml" && fila.getCell(3).value === "Jaba x12") fila.getCell(6).value = 2;
+  });
+  // «Salidas»: se dañó 1 pan.
+  libro.getWorksheet("Salidas")!.eachRow((fila) => {
+    if (fila.getCell(2).value === "Pan de sal") {
+      fila.getCell(4).value = 1;
+      fila.getCell(5).value = "Se dañó";
+    }
+  });
   const hoja = libro.getWorksheet("Productos")!;
   const titulos = (hoja.getRow(1).values as unknown[]).slice(1);
   expect(titulos.slice(0, 5)).toEqual(["Categoría", "Producto", "Costo", "Precio de venta", "Cuántos tengo"]);
@@ -198,20 +220,23 @@ test("descargar mis productos, editarlos en Excel y volver a importarlos sin dup
   });
   await expect(page.getByText(/con errores/)).toHaveCount(0);
   await page.getByRole("button", { name: /Guardar en el catálogo/ }).click();
-  await expect(page.getByText(/Listo: 1 producto\(s\) nuevo\(s\) y \d+ actualizado\(s\)\. Se corrigió el stock de 1\./)).toBeVisible();
+  await expect(page.getByText(/Listo: 1 producto\(s\) nuevo\(s\) y \d+ actualizado\(s\)\. Se sumó lo que entró a 1 producto\(s\)\. Se restaron 1 salida\(s\)\. Se corrigió el stock de 1\./),
+  ).toBeVisible();
 
   await page.goto("/catalogo");
   await expect(page.getByRole("listitem")).toHaveCount(antes + 1); // nada duplicado, solo el arroz
   const pan = page.getByRole("listitem").filter({ hasText: "Pan de sal" });
   await expect(pan).toContainText("$0.20");
-  await expect(pan).toContainText("35 unidades");
-  // La Coca-Cola mantiene su stock (no se sumó otra vez).
-  await expect(page.getByRole("listitem").filter({ hasText: "Coca-Cola 500 ml" })).toContainText("44 unidades");
+  await expect(pan).toContainText("34 unidades"); // 35 contados − 1 que se dañó
+  // La Coca-Cola: 44 que había + 2 jabas (24) que entraron. Su stock no se duplicó.
+  await expect(page.getByRole("listitem").filter({ hasText: "Coca-Cola 500 ml" })).toContainText("68 unidades");
 });
 
-test("categorías: crear una subcategoría", async ({ page }) => {
+test("categorías: solo principales, se crea una nueva", async ({ page }) => {
   await page.goto("/catalogo/categorias");
-  await page.getByRole("listitem").filter({ hasText: /^Bebidas/ }).getByRole("button", { name: "Agregar subcategoría" }).click();
+  await expect(page.getByRole("button", { name: "Agregar subcategoría" })).toHaveCount(0);
+  await expect(page.getByText("Gaseosas")).toHaveCount(0);
+  await page.getByRole("button", { name: "Nueva categoría" }).click();
   await page.getByLabel("Nombre").fill("Tés fríos");
   await page.getByLabel("Margen objetivo %").fill("30");
   await page.getByRole("button", { name: "Guardar" }).click();

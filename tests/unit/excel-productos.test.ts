@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vitest";
 import {
   armarImportacion,
+  DESPLAZAMIENTO_COMPRAS,
+  DESPLAZAMIENTO_SALIDAS,
+  filasDeSalidas,
+  leerMotivo,
+  nombreDeFila,
+  filasDeCompras,
   filasParaExportar,
   COLUMNAS_PRODUCTOS,
   mapearEncabezados,
@@ -116,10 +122,10 @@ describe("revisar filas del Excel", () => {
 
   test("avisa categorías nuevas y venta a pérdida", () => {
     const { filas, categoriasNuevas } = revisarFilas(
-      [fila({ nombre: "Escoba", categoria: "Limpieza", subcategoria: "Escobas", precioCompra: "3", precioVenta: "2.5" })],
+      [fila({ nombre: "Escoba", categoria: "Limpieza", precioCompra: "3", precioVenta: "2.5" })],
       contexto,
     );
-    expect(categoriasNuevas).toEqual(["Limpieza", "Limpieza → Escobas"]);
+    expect(categoriasNuevas).toEqual(["Limpieza"]);
     expect(filas[0].avisos.join(" ")).toContain("pérdida");
   });
 
@@ -266,15 +272,15 @@ describe("descargar mis productos (y volver a importar)", () => {
     stock: "30",
     costo: "0.75",
     presentaciones: [
-      { nombre: "Unidad", factor: "1", precioVenta: "1", esBase: true, codigos: ["7861001234565"] },
-      { nombre: "Jaba x12", factor: "12", precioVenta: "10.8", esBase: false, codigos: [] },
+      { nombre: "Unidad", factor: "1", precioVenta: "1", esBase: true, paraCompra: true, codigos: ["7861001234565"] },
+      { nombre: "Jaba x12", factor: "12", precioVenta: "10.8", esBase: false, paraCompra: true, codigos: [] },
     ],
   };
 
   test("una fila por presentación; el stock solo en la unidad", () => {
     const filas = filasParaExportar([coca], categorias);
     expect(filas).toEqual([
-      expect.objectContaining({ categoria: "Bebidas", subcategoria: "Gaseosas", nombre: "Coca-Cola 500 ml", presentacion: "", precioCompra: 0.75, precioVenta: 1, stockInicial: 30, stockMinimo: 12, codigoBarras: "7861001234565" }),
+      expect.objectContaining({ categoria: "Bebidas", nombre: "Coca-Cola 500 ml", presentacion: "", precioCompra: 0.75, precioVenta: 1, stockInicial: 30, stockMinimo: 12, codigoBarras: "7861001234565" }),
       expect.objectContaining({ presentacion: "Jaba x12", factor: 12, precioCompra: 9, precioVenta: 10.8, stockInicial: "" }),
     ]);
   });
@@ -312,5 +318,150 @@ describe("descargar mis productos (y volver a importar)", () => {
     expect([nuevos, actualizados]).toEqual([0, 1]);
     expect(productos[0]).toMatchObject({ id: "p1", stock_real: "30", costo_unitario: "0.75", stock_minimo: "12" });
     expect((productos[0].presentaciones as { id: string }[]).map((p) => p.id)).toEqual(["u", "j"]);
+  });
+});
+
+describe("hoja «Compras»: lo que entró se suma", () => {
+  const opciones = {
+    unirParecidos: new Set<number>(),
+    categoriaId: (c: string | null) => (c ? `cat:${c}` : null),
+    ivaDeCategoria: () => "15" as const,
+  };
+  const actual = {
+    id: "p1", nombre: "Coca-Cola 500 ml", marca: "Coca-Cola", categoriaId: "beb", plu: null, sinonimos: [], fotoRuta: null,
+    unidadBase: "unidad" as const, tarifaIva: "15" as const, stockMinimo: "12", manejaCaducidad: false, retornable: false,
+    soloMayores: false, ubicacion: "", activo: true,
+    presentaciones: [
+      { id: "u", nombre: "Unidad", factor: "1", precioVenta: "1", paraVenta: true, paraCompra: true, esBase: true, codigos: ["7861001234565"] },
+      { id: "j", nombre: "Jaba x12", factor: "12", precioVenta: "10.8", paraVenta: true, paraCompra: true, esBase: false, codigos: [] },
+    ],
+  };
+  const compra = (datos: Partial<FilaProducto>, n: number) => ({ ...fila(datos), fila: DESPLAZAMIENTO_COMPRAS + n, deCompras: true });
+
+  test("2 jabas que entraron se suman como 24 unidades, con su costo; no tocan el stock real", () => {
+    const { filas } = revisarFilas(
+      [compra({ categoria: "Bebidas", nombre: "Coca-Cola 500 ml", presentacion: "Jaba x12", precioCompra: "9", precioVenta: "10.8", stockInicial: "2" }, 2)],
+      contexto,
+    );
+    expect(filas[0].errores).toEqual([]); // no hace falta el factor: la jaba ya existe
+    const p = armarImportacion(filas, { ...opciones, actuales: new Map([["p1", actual]]) }).productos[0];
+    expect(p).toMatchObject({ id: "p1", stock_sumar: "24", costo_sumar: "0.75", stock_real: null });
+  });
+
+  test("algo nuevo comprado se crea con lo que entró como stock", () => {
+    const { filas } = revisarFilas(
+      [compra({ categoria: "Ferretería", nombre: "Foco LED 9W", precioCompra: "1.20", precioVenta: "2", stockInicial: "6" }, 9)],
+      contexto,
+    );
+    const { productos, nuevos } = armarImportacion(filas, { ...opciones, actuales: new Map() });
+    expect(nuevos).toBe(1);
+    expect(productos[0]).toMatchObject({ nombre: "Foco LED 9W", stock_inicial: "6", costo_unitario: "1.2", categoria_id: "cat:Ferretería" });
+  });
+
+  test("la misma cosa en «Productos» (stock real) y en «Compras» (lo que entró)", () => {
+    const { filas } = revisarFilas(
+      [
+        fila({ nombre: "Coca-Cola 500 ml", stockInicial: "30" }),
+        compra({ nombre: "Coca-Cola 500 ml", presentacion: "Unidad", stockInicial: "6" }, 2),
+      ],
+      contexto,
+    );
+    const p = armarImportacion(filas, { ...opciones, actuales: new Map([["p1", actual]]) }).productos[0];
+    expect(p).toMatchObject({ stock_real: "30", stock_sumar: "6" });
+  });
+
+  test("al descargar, «Compras» trae cada producto en cada forma de compra, sin cantidad", () => {
+    const filasCompras = filasDeCompras(
+      [{
+        nombre: "Coca-Cola 500 ml", marca: "", categoriaId: "gas", plu: null, unidadBase: "unidad", stockMinimo: "0", stock: "5", costo: "0.75",
+        presentaciones: [
+          { nombre: "Unidad", factor: "1", precioVenta: "1", esBase: true, paraCompra: true, codigos: [] },
+          { nombre: "Paquete x6", factor: "6", precioVenta: "5.5", esBase: false, paraCompra: false, codigos: [] },
+          { nombre: "Jaba x12", factor: "12", precioVenta: "10.8", esBase: false, paraCompra: true, codigos: [] },
+        ],
+      }],
+      [
+        { id: "beb", nombre: "Bebidas", padreId: null },
+        { id: "gas", nombre: "Gaseosas", padreId: "beb" },
+      ],
+    );
+    expect(filasCompras).toEqual([
+      { categoria: "Bebidas", nombre: "Coca-Cola 500 ml", presentacion: "Unidad", precioCompra: 0.75, precioVenta: 1, stockInicial: "", factor: "" },
+      { categoria: "Bebidas", nombre: "Coca-Cola 500 ml", presentacion: "Jaba x12", precioCompra: 9, precioVenta: 10.8, stockInicial: "", factor: 12 },
+    ]);
+  });
+});
+
+describe("hoja «Salidas»: lo que salió se resta", () => {
+  const opciones = {
+    unirParecidos: new Set<number>(),
+    categoriaId: (c: string | null) => (c ? `cat:${c}` : null),
+    ivaDeCategoria: () => "15" as const,
+  };
+  const actual = {
+    id: "p1", nombre: "Coca-Cola 500 ml", marca: "Coca-Cola", categoriaId: "beb", plu: null, sinonimos: [], fotoRuta: null,
+    unidadBase: "unidad" as const, tarifaIva: "15" as const, stockMinimo: "12", manejaCaducidad: false, retornable: false,
+    soloMayores: false, ubicacion: "", activo: true,
+    presentaciones: [
+      { id: "u", nombre: "Unidad", factor: "1", precioVenta: "1", paraVenta: true, paraCompra: true, esBase: true, codigos: [] },
+      { id: "j", nombre: "Jaba x12", factor: "12", precioVenta: "10.8", paraVenta: true, paraCompra: true, esBase: false, codigos: [] },
+    ],
+  };
+  const salida = (datos: Partial<FilaProducto>, n: number) => ({ ...fila(datos), fila: DESPLAZAMIENTO_SALIDAS + n, deSalidas: true });
+
+  test("se entiende el motivo de la lista, escrito a mano o vacío (= se dañó)", () => {
+    expect(leerMotivo("Se caducó")).toBe("caducado");
+    expect(leerMotivo("consumo de la casa")).toBe("autoconsumo");
+    expect(leerMotivo("vencido")).toBe("caducado");
+    expect(leerMotivo("")).toBe("merma");
+    expect(leerMotivo("vendido")).toBeNull();
+    expect(nombreDeFila(DESPLAZAMIENTO_SALIDAS + 3)).toBe("Salidas 3");
+  });
+
+  test("2 que se dañaron y 1 jaba que caducó se restan en unidades, sin tocar nada más", () => {
+    const { filas } = revisarFilas(
+      [
+        salida({ nombre: "Coca-Cola 500 ml", stockInicial: "2", motivo: "Se dañó", nota: "se rompieron" }, 2),
+        salida({ nombre: "Coca-Cola 500 ml", presentacion: "Jaba x12", stockInicial: "1", motivo: "Se caducó" }, 3),
+      ],
+      contexto,
+    );
+    expect(filas.flatMap((f) => f.errores)).toEqual([]);
+    expect(filas[0].avisos).toContain("Se restarán 2 (Se dañó).");
+    const p = armarImportacion(filas, { ...opciones, actuales: new Map([["p1", actual]]) }).productos[0];
+    expect(p).toMatchObject({
+      id: "p1",
+      stock_real: null,
+      stock_sumar: null,
+      categoria_id: "beb",
+      salidas: [
+        { tipo: "merma", cantidad: "2", nota: "se rompieron" },
+        { tipo: "caducado", cantidad: "12", nota: "" },
+      ],
+    });
+    expect((p.presentaciones as unknown[]).length).toBe(2);
+  });
+
+  test("un producto que no existe o un motivo raro dan error", () => {
+    const { filas } = revisarFilas(
+      [
+        salida({ nombre: "Producto inventado XYZ", stockInicial: "1" }, 4),
+        salida({ nombre: "Pan de sal", stockInicial: "3", motivo: "vendido" }, 5),
+      ],
+      contexto,
+    );
+    expect(filas[0].errores.join(" ")).toMatch(/no está en Sandry/);
+    expect(filas[1].errores.join(" ")).toMatch(/Motivo no válido/);
+  });
+
+  test("al descargar, «Salidas» trae cada producto en su unidad, sin cantidad", () => {
+    const filasSalidas = filasDeSalidas(
+      [{
+        nombre: "Papa chola", marca: "", categoriaId: "viv", plu: null, unidadBase: "libra", stockMinimo: "0", stock: "50", costo: "0.3",
+        presentaciones: [{ nombre: "Libra", factor: "1", precioVenta: "0.45", esBase: true, paraCompra: true, codigos: [] }],
+      }],
+      contexto.categorias,
+    );
+    expect(filasSalidas).toEqual([{ categoria: "Víveres", nombre: "Papa chola", presentacion: "Libra", stockInicial: "", motivo: "", nota: "" }]);
   });
 });

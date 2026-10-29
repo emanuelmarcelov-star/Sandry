@@ -7,7 +7,7 @@ import { CircleAlert, CircleCheck, Download, FileSpreadsheet, Upload } from "luc
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Aviso, Casilla } from "@/components/formulario";
-import { COLUMNAS_PRODUCTOS, revisarFilas, type ClaveColumna, type ContextoImportacion, type FilaProducto } from "@/lib/excel/productos";
+import { COLUMNAS_PRODUCTOS, nombreDeFila, revisarFilas, type ClaveColumna, type ContextoImportacion, type FilaProducto } from "@/lib/excel/productos";
 import { confirmarImportacion, leerExcelProductos } from "@/server/acciones/catalogo";
 import { textosCatalogo } from "@/lib/textos";
 import { cn } from "cn";
@@ -143,7 +143,7 @@ export function Importador() {
             <table className="w-full text-sm">
               <thead className="bg-muted text-left">
                 <tr>
-                  <th className="p-2">Fila</th>
+                  <th className="p-2">Hoja y fila</th>
                   <th className="p-2">Estado</th>
                   {COLUMNAS_PRODUCTOS.filter((c) => EDITABLES.includes(c.clave)).map((c) => (
                     <th key={c.clave} className="p-2 whitespace-nowrap">
@@ -159,7 +159,7 @@ export function Importador() {
                   const mal = r.errores.length > 0;
                   return (
                     <tr key={f.fila} className={cn("border-t align-top", mal ? "bg-destructive/10" : "bg-green-600/5")}>
-                      <td className="p-2 font-mono">{f.fila}</td>
+                      <td className="p-2 whitespace-nowrap">{nombreDeFila(f.fila)}</td>
                       <td className="min-w-56 p-2">
                         {r.coincidencia.tipo === "nuevo" ? (
                           <Badge variant="secondary">{t.nuevo}</Badge>

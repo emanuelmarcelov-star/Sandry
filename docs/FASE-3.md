@@ -4,9 +4,9 @@ Enlace de la app: **https://storied-raindrop-2de6ba.netlify.app** → menú → 
 
 ## Qué se hizo
 
-- **Categorías en árbol** ya cargadas (Bebidas › Gaseosas, Víveres › Arroz, …), con
-  color y **margen objetivo** (para el precio sugerido). Se pueden crear, renombrar, mover
-  y desactivar. Si una subcategoría no tiene margen propio, **hereda** el de su categoría.
+- **Categorías** ya cargadas, solo las principales (Bebidas, Víveres, Botiquín,
+  Ferretería…), sin subcategorías. Cada una con color y **margen objetivo** (para el
+  precio sugerido). Se pueden crear, renombrar y desactivar.
 - **Productos** con: nombre, marca, categoría, foto, apodos para buscarlo (ej. "colita"),
   código corto (PLU) para lo que no tiene código de barras, unidad en que se cuenta
   (unidad, libra, kilo, litro), stock mínimo, ubicación, si caduca, si es retornable
@@ -41,8 +41,8 @@ Enlace de la app: **https://storied-raindrop-2de6ba.netlify.app** → menú → 
 - **Búsqueda tolerante**: «cocacola», «coca 3l», «pilsner» (mal escrito), «AZUCAR»,
   por apodo, por código o por código corto.
 
-Pruebas automáticas: 83 de cálculos (margen, precio sugerido, códigos, Excel), 58 de
-reglas de la base de datos y 25 de recorridos en el navegador. Todas pasan.
+Pruebas automáticas: 94 de cálculos (margen, precio sugerido, códigos, Excel), 62 de
+reglas de la base de datos y 26 de recorridos en el navegador. Todas pasan.
 
 ---
 
@@ -73,7 +73,7 @@ Entra con la cuenta de tu mamá (administradora).
 5. **Excel**: Catálogo → **Importar Excel** → **Descargar plantilla**. Ábrela, mira la
    hoja «Ejemplos» y llena 3 o 4 productos en la hoja «Productos». Basta con las 5 primeras
    columnas (verdes): Categoría, Producto, Costo, Precio de venta y Cuántos tengo. Las
-   grises (marca, presentación, códigos, subcategoría…) son opcionales. Escribe a propósito
+   grises (marca, presentación, códigos…) son opcionales. Escribe a propósito
    una letra en un precio. Súbela: verás la fila en rojo con el error. Corrígelo en la
    tabla y toca **Guardar en el catálogo**.
 6. **Etiquetas**: Catálogo → **Etiquetas**. Verás los productos «por reimprimir». Elige
@@ -90,9 +90,22 @@ compras desde el celular, kardex y alertas).
 
 ## Excel: sacar todo y cargar muchos a la vez
 
-**Sacar todos los productos a Excel**: Catálogo → **Descargar Excel** (o en Importar Excel →
-**Descargar mis productos**). Sale un archivo con todo el catálogo, en el mismo formato de
-la plantilla.
+**Sacar todo a Excel**: Catálogo → **Descargar Excel** (o en Importar Excel →
+**Descargar mis productos**). Sale un archivo con la tienda al día:
+
+| Hoja | Para qué | Qué escribes |
+|---|---|---|
+| **Productos** | Tu catálogo con lo que hay hoy | Cambia precios o «Cuántos tengo» si contaste |
+| **Compras** | Todos tus productos, listos | Solo **«Cuántos entraron»** en lo que llegó. Algo nuevo: una fila al final |
+| **Salidas** | Todos tus productos, listos | **«Cuántos salieron»** y el motivo (se dañó, se caducó, consumo de la casa, regalo, robo) |
+| **Resumen** | Cuánto vale lo que hay, agotados, poco stock, lo que entró y salió este mes | Nada (solo para ver) |
+| **Movimientos** | Todo lo que entró y salió en los últimos 90 días | Nada (solo para ver) |
+
+Las **ventas** no se anotan en «Salidas»: las registrará la caja sola (fase 5). Las ventas,
+gastos e ingresos se agregarán al «Resumen» cuando estén esas fases.
+
+**Anotar lo que entró o salió**: descarga el Excel, escribe solo los números en «Compras»
+o «Salidas», guárdalo y súbelo en **Importar Excel**. Las filas sin número se ignoran.
 
 **Cambiar o agregar muchos a la vez**:
 1. Descarga tus productos (lo de arriba).

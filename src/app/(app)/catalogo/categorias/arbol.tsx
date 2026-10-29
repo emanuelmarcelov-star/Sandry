@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Aviso, Campo, Casilla, Selector } from "@/components/formulario";
+import { Aviso, Campo, Casilla } from "@/components/formulario";
 import { guardarCategoria } from "@/server/acciones/catalogo";
 import type { DatosCategoria } from "@/lib/esquemas/catalogo";
 import { textosCatalogo } from "@/lib/textos";
@@ -79,37 +79,22 @@ export function ArbolCategorias({ categorias }: { categorias: Categoria[] }) {
               >
                 <Pencil className="size-4" aria-hidden /> {t.editar}
               </Button>
-              {c.nivel === 0 && (
-                <Button size="sm" variant="ghost" onClick={() => setEditando(nueva(c.id))}>
-                  <Plus className="size-4" aria-hidden /> {t.subcategoria}
-                </Button>
-              )}
             </span>
           </li>
         ))}
       </ul>
 
-      {editando && <DialogoCategoria valores={editando} categorias={categorias} onCerrar={() => setEditando(null)} />}
+      {editando && <DialogoCategoria valores={editando} onCerrar={() => setEditando(null)} />}
     </>
   );
 }
 
-function DialogoCategoria({
-  valores,
-  categorias,
-  onCerrar,
-}: {
-  valores: DatosCategoria;
-  categorias: Categoria[];
-  onCerrar: () => void;
-}) {
+function DialogoCategoria({ valores, onCerrar }: { valores: DatosCategoria; onCerrar: () => void }) {
   const router = useRouter();
   const [datos, setDatos] = useState(valores);
   const [error, setError] = useState<string>();
   const [guardando, iniciar] = useTransition();
   const cambiar = (c: Partial<DatosCategoria>) => setDatos({ ...datos, ...c });
-  // No se puede elegir como madre a sí misma ni a sus hijas.
-  const madres = categorias.filter((c) => c.nivel === 0 && c.id !== datos.id);
 
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && onCerrar()}>
@@ -133,16 +118,6 @@ function DialogoCategoria({
         >
           <Campo id="cat-nombre" etiqueta={t.nombre}>
             <Input id="cat-nombre" value={datos.nombre} onChange={(e) => cambiar({ nombre: e.target.value })} autoFocus />
-          </Campo>
-          <Campo id="cat-madre" etiqueta={t.madre}>
-            <Selector id="cat-madre" value={datos.padreId} onChange={(e) => cambiar({ padreId: e.target.value })}>
-              <option value="">{t.ninguna}</option>
-              {madres.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </Selector>
           </Campo>
           <div className="grid grid-cols-[auto_1fr] gap-3">
             <Campo id="cat-color" etiqueta={t.color}>

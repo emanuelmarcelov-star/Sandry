@@ -136,6 +136,16 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
 - 29/10/2026 — **Excel sencillo**: columnas en orden Categoría, Producto, Costo, Precio de
   venta, Cuántos tengo (verdes) y luego lo opcional (gris). Se aceptan títulos de plantillas
   anteriores (`otros` en `COLUMNAS_PRODUCTOS`).
+- 29/10/2026 — **Sin subcategorías**: solo categorías principales (Bebidas, Botiquín,
+  Ferretería…). La migración 000008 movió los productos a su categoría principal y borró
+  las subcategorías. La pantalla ya no ofrece «Agregar subcategoría».
+- 29/10/2026 — **Excel = foto completa de la tienda** («Descargar Excel», `sandry-dd-mm-aaaa.xlsx`):
+  «Productos» (stock real), «Compras» (cada producto en cada forma de compra: solo se escribe
+  «Cuántos entraron», se SUMA con su costo; filas nuevas = productos nuevos), «Salidas»
+  («Cuántos salieron» + motivo merma/caducado/autoconsumo/regalo/robo, se RESTA; solo
+  productos existentes), y solo para ver «Resumen» y «Movimientos» (kardex 90 días; solo con
+  `costos.ver`). Las ventas NO van en «Salidas» (las registra la caja). Cuando existan
+  ventas, gastos e ingresos (fases 4–6), agregarlos a «Resumen» y como hojas de solo lectura.
 - 28/10/2026 — Fase 7 (comprobantes/factura electrónica) se hace AL FINAL, después de la
   fase 8. El ticket interno sin valor tributario se entrega en la fase 5.
 

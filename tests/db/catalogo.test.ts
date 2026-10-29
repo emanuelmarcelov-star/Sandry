@@ -17,7 +17,7 @@ let duena: SupabaseClient<Database>;
 let cajera: SupabaseClient<Database>;
 let bodega: SupabaseClient<Database>;
 let idCola: string;
-let gaseosas: string;
+let bebidas: string;
 
 const n = (v: unknown) => Number(v);
 
@@ -30,7 +30,7 @@ function cocaCola(extra: Record<string, unknown> = {}) {
   return {
     nombre: "Coca-Cola 500 ml",
     marca: "Coca-Cola",
-    categoria_id: gaseosas,
+    categoria_id: bebidas,
     plu: "",
     sinonimos: ["colita", "coca"],
     unidad_base: "unidad",
@@ -59,34 +59,30 @@ beforeAll(async () => {
   void idDuena;
   cajera = await sesionDe(CAJERA);
   bodega = await sesionDe(BODEGA);
-  gaseosas = await categoria("Gaseosas");
+  bebidas = await categoria("Bebidas");
 });
 
 describe("categorías", () => {
-  test("vienen cargadas en árbol, con IVA y margen que se heredan", async () => {
-    const { data: g } = await duena.rpc("valores_categoria", { p_categoria: gaseosas });
-    expect(g?.[0]).toMatchObject({ tarifa_iva: "15" });
-    expect(n(g?.[0].margen_objetivo)).toBe(20);
-    const { data: cond } = await duena.rpc("valores_categoria", { p_categoria: await categoria("Condimentos") });
-    expect(cond?.[0].tarifa_iva).toBe("15"); // excepción dentro de Víveres (0%)
-    expect(n(cond?.[0].margen_objetivo)).toBe(15);
-    const { data: arroz } = await duena.rpc("valores_categoria", { p_categoria: await categoria("Arroz") });
-    expect(arroz?.[0].tarifa_iva).toBe("0");
+  test("vienen cargadas solo las principales (sin subcategorías), con su margen", async () => {
+    const { data: b } = await duena.rpc("valores_categoria", { p_categoria: bebidas });
+    expect(n(b?.[0].margen_objetivo)).toBe(20);
+    const { data: viveres } = await duena.rpc("valores_categoria", { p_categoria: await categoria("Víveres") });
+    expect(n(viveres?.[0].margen_objetivo)).toBe(15);
+    const { count } = await admin().from("categorias").select("id", { count: "exact", head: true }).not("padre_id", "is", null);
+    expect(count).toBe(0);
+    for (const nombre of ["Botiquín", "Ferretería"]) expect(await categoria(nombre)).toBeTruthy();
   });
 
-  test("se crean y no se permiten nombres repetidos en el mismo lugar ni ciclos", async () => {
-    const bebidas = await categoria("Bebidas");
-    const { data: id, error } = await duena.rpc("guardar_categoria", { p: { nombre: "Tés fríos", padre_id: bebidas } });
+  test("se crean y no se permiten nombres repetidos", async () => {
+    const { error } = await duena.rpc("guardar_categoria", { p: { nombre: "Papelería escolar" } });
     expect(error).toBeNull();
-    const repetida = await duena.rpc("guardar_categoria", { p: { nombre: "tes FRIOS", padre_id: bebidas } });
+    const repetida = await duena.rpc("guardar_categoria", { p: { nombre: "papeleria ESCOLAR" } });
     expect(repetida.error?.message).toContain("Ya existe");
-    const ciclo = await duena.rpc("guardar_categoria", { p: { id: bebidas, nombre: "Bebidas", padre_id: id } });
-    expect(ciclo.error?.message).toContain("dentro de sí misma");
   });
 
   test("la cajera ve las categorías pero no las cambia", async () => {
     const { data } = await cajera.from("categorias").select("id");
-    expect(data!.length).toBeGreaterThan(20);
+    expect(data!.length).toBeGreaterThan(10);
     const { error } = await cajera.rpc("guardar_categoria", { p: { nombre: "Hackeo" } });
     expect(error?.code).toBe("42501");
   });
@@ -365,5 +361,42 @@ describe("importar con stock real (productos existentes)", () => {
     expect(await stock()).toBe(50);
     const { data: ultimo } = await duena.from("movimientos_stock").select("tipo, nota").eq("producto_id", idCola).order("id", { ascending: false }).limit(1).single();
     expect(ultimo).toEqual({ tipo: "conteo", nota: "Corregido desde Excel" });
+  });
+});
+
+describe("importar con «Compras» y «Salidas»", () => {
+  async function stock() {
+    return n((await duena.from("existencias").select("cantidad").eq("producto_id", idCola).single()).data?.cantidad);
+  }
+  async function payload(extra: Record<string, unknown>) {
+    const { data: pres } = await duena.from("presentaciones").select("id, nombre, factor, precio_venta, es_base").eq("producto_id", idCola).eq("activa", true);
+    return { ...cocaCola({ id: idCola, stock_inicial: null, costo_unitario: null }), presentaciones: pres!.map((p) => ({ ...p, codigos: [] })), ...extra };
+  }
+
+  test("lo que entró se suma con su costo y lo que salió se resta con su motivo", async () => {
+    const antes = await stock(); // 50
+    const { data, error } = await duena.rpc("importar_productos", {
+      p_productos: [await payload({
+        stock_sumar: 12,
+        costo_sumar: 0.8,
+        salidas: [{ tipo: "merma", cantidad: 2, nota: "se rompieron" }, { tipo: "caducado", cantidad: 1, nota: "" }],
+      })],
+    });
+    expect(error).toBeNull();
+    expect(data).toMatchObject({ compras: 1, salidas: 2 });
+    expect(await stock()).toBe(antes + 12 - 3);
+    const { data: ultimos } = await duena.from("movimientos_stock").select("tipo, cantidad, nota").eq("producto_id", idCola).order("id", { ascending: false }).limit(3);
+    expect(ultimos?.map((m) => [m.tipo, n(m.cantidad), m.nota])).toEqual([
+      ["caducado", -1, "Salida desde Excel"],
+      ["merma", -2, "se rompieron"],
+      ["compra", 12, "Compra desde Excel"],
+    ]);
+  });
+
+  test("una salida con motivo de venta o cantidad 0 se rechaza", async () => {
+    const venta = await duena.rpc("importar_productos", { p_productos: [await payload({ salidas: [{ tipo: "venta", cantidad: 1 }] })] });
+    expect(venta.error?.message).toContain("Motivo de salida no válido");
+    const cero = await duena.rpc("importar_productos", { p_productos: [await payload({ salidas: [{ tipo: "merma", cantidad: 0 }] })] });
+    expect(cero.error?.message).toContain("mayor que 0");
   });
 });

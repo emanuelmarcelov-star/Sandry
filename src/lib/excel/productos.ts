@@ -2,12 +2,18 @@
  * Importación de productos desde Excel: revisa cada fila y explica los
  * problemas en español. Se usa en el navegador (vista previa editable) y en el
  * servidor (que vuelve a revisar todo antes de guardar).
+ *
+ * Dos hojas:
+ *  - «Productos»: el catálogo. «Cuántos tengo» es el stock real (o inicial si es nuevo).
+ *  - «Compras»: lo que entró. «Cuántos entraron» se SUMA al stock. Si el
+ *    producto no existe, se crea.
+ *  - «Salidas»: lo que salió sin venderse (se dañó, caducó…). «Cuántos salieron» se RESTA.
  */
 import { dec, leerNumero } from "@/lib/dinero";
 import { UNIDADES, type TarifaIva, type UnidadBase } from "@/lib/catalogo";
 
 /**
- * Columnas de la hoja "Productos", en orden: primero lo más sencillo
+ * Columnas de la hoja «Productos», en orden: primero lo más sencillo
  * (categoría, producto, costo, precio, stock) y al final lo opcional.
  * `otros` son títulos de plantillas anteriores que se siguen aceptando.
  */
@@ -24,18 +30,80 @@ export const COLUMNAS_PRODUCTOS = [
   { clave: "unidadBase", titulo: "Se cuenta por", ancho: 12, otros: ["Unidad base"] },
   { clave: "plu", titulo: "Código corto", ancho: 12, otros: ["Código interno"] },
   { clave: "codigoBarras", titulo: "Código de barras", ancho: 18, otros: [] },
-  { clave: "subcategoria", titulo: "Subcategoría", ancho: 22, otros: [] },
   { clave: "caducidad", titulo: "Fecha de caducidad", ancho: 16, otros: [] },
   { clave: "proveedor", titulo: "Proveedor", ancho: 20, otros: [] },
 ] as const;
 
+/** Columnas de la hoja «Compras»: solo hace falta llenar «Cuántos entraron». */
+export const COLUMNAS_COMPRAS = [
+  { clave: "categoria", titulo: "Categoría", ancho: 24, otros: [] },
+  { clave: "nombre", titulo: "Producto", ancho: 32, otros: ["Código o nombre del producto"] },
+  { clave: "presentacion", titulo: "Presentación", ancho: 16, otros: [] },
+  { clave: "precioCompra", titulo: "Costo", ancho: 11, otros: [] },
+  { clave: "precioVenta", titulo: "Precio de venta", ancho: 14, otros: [] },
+  { clave: "stockInicial", titulo: "Cuántos entraron", ancho: 15, otros: ["Cantidad"] },
+  { clave: "factor", titulo: "Factor", ancho: 9, otros: [] },
+] as const;
+
+/** Motivos de la hoja «Salidas» (lo que sale sin venderse). */
+export const MOTIVOS_SALIDA = {
+  merma: "Se dañó",
+  caducado: "Se caducó",
+  autoconsumo: "Consumo de la casa",
+  regalo: "Regalo",
+  robo: "Robo o pérdida",
+} as const;
+export type MotivoSalida = keyof typeof MOTIVOS_SALIDA;
+
+/** Columnas de la hoja «Salidas»: solo hace falta «Cuántos salieron» y el motivo. */
+export const COLUMNAS_SALIDAS = [
+  { clave: "categoria", titulo: "Categoría", ancho: 24, otros: [] },
+  { clave: "nombre", titulo: "Producto", ancho: 32, otros: [] },
+  { clave: "presentacion", titulo: "Presentación", ancho: 16, otros: [] },
+  { clave: "stockInicial", titulo: "Cuántos salieron", ancho: 15, otros: ["Cantidad"] },
+  { clave: "motivo", titulo: "Motivo", ancho: 20, otros: [] },
+  { clave: "nota", titulo: "Nota", ancho: 30, otros: [] },
+] as const;
+
+/** Lee el motivo escrito en Excel (el texto de la lista, la clave o algo parecido). Vacío = se dañó. */
+export function leerMotivo(texto: string): MotivoSalida | null {
+  const n = normalizarTexto(texto);
+  if (!n) return "merma";
+  for (const [clave, titulo] of Object.entries(MOTIVOS_SALIDA)) {
+    if (n === clave || n === normalizarTexto(titulo)) return clave as MotivoSalida;
+  }
+  if (/dan|romp|perd/.test(n)) return "merma";
+  if (/caduc|venc/.test(n)) return "caducado";
+  if (/casa|consum/.test(n)) return "autoconsumo";
+  if (/regal/.test(n)) return "regalo";
+  if (/rob/.test(n)) return "robo";
+  return null;
+}
+
+type Columna = { clave: string; titulo: string; otros: readonly string[] };
+
 /** Letra de Excel de una columna (A, B, C...) según su clave. */
-export function letraDeColumna(clave: ClaveColumna): string {
-  return String.fromCharCode(65 + COLUMNAS_PRODUCTOS.findIndex((c) => c.clave === clave));
+export function letraDeColumna(clave: string, columnas: readonly Columna[] = COLUMNAS_PRODUCTOS): string {
+  return String.fromCharCode(65 + columnas.findIndex((c) => c.clave === clave));
 }
 
 export type ClaveColumna = (typeof COLUMNAS_PRODUCTOS)[number]["clave"];
-export type FilaProducto = { fila: number } & Record<ClaveColumna, string>;
+export type FilaProducto = {
+  fila: number;
+  deCompras?: boolean;
+  deSalidas?: boolean;
+  /** Solo hoja «Salidas». */
+  motivo?: string;
+  nota?: string;
+} & Record<ClaveColumna, string>;
+
+/** Número de fila interno para las hojas «Compras» y «Salidas» (no chocan con las de «Productos»). */
+export const DESPLAZAMIENTO_COMPRAS = 100_000;
+export const DESPLAZAMIENTO_SALIDAS = 200_000;
+export function nombreDeFila(fila: number): string {
+  if (fila >= DESPLAZAMIENTO_SALIDAS) return `Salidas ${fila - DESPLAZAMIENTO_SALIDAS}`;
+  return fila >= DESPLAZAMIENTO_COMPRAS ? `Compras ${fila - DESPLAZAMIENTO_COMPRAS}` : `Productos ${fila}`;
+}
 
 export type CategoriaContexto = { id: string; nombre: string; padreId: string | null };
 export type ProductoContexto = { id: string; nombre: string; marca: string; plu: string | null; codigos: string[] };
@@ -52,6 +120,8 @@ export type Coincidencia =
 
 export type FilaRevisada = {
   fila: number;
+  deCompras: boolean;
+  deSalidas: boolean;
   vacia: boolean;
   errores: string[];
   avisos: string[];
@@ -71,8 +141,9 @@ export type FilaRevisada = {
     stock: string | null;
     stockMinimo: string | null;
     categoria: string | null;
-    subcategoria: string | null;
     caducidad: boolean;
+    /** Solo hoja «Salidas». */
+    salida?: { tipo: MotivoSalida; nota: string };
   };
 };
 
@@ -117,16 +188,10 @@ export function normalizarPlu(texto: string): string {
 
 // ------------------------------------------------------------------ revisión
 
-/** Busca una categoría por nombre (y opcionalmente dentro de una madre). */
-export function buscarCategoria(
-  categorias: CategoriaContexto[],
-  nombre: string,
-  padreId: string | null | undefined = undefined,
-): CategoriaContexto | undefined {
+/** Busca una categoría principal por nombre (sin tildes ni mayúsculas). */
+export function buscarCategoria(categorias: CategoriaContexto[], nombre: string): CategoriaContexto | undefined {
   const n = normalizarTexto(nombre);
-  return categorias.find(
-    (c) => normalizarTexto(c.nombre) === n && (padreId === undefined || c.padreId === padreId),
-  );
+  return categorias.find((c) => normalizarTexto(c.nombre) === n && !c.padreId) ?? categorias.find((c) => normalizarTexto(c.nombre) === n);
 }
 
 /**
@@ -151,10 +216,14 @@ export function revisarFilas(
   const categoriasNuevas = new Set<string>();
 
   const revisadas = filas.map((f): FilaRevisada => {
+    const deCompras = Boolean(f.deCompras);
+    const deSalidas = Boolean(f.deSalidas);
     const errores: string[] = [];
     const avisos: string[] = [];
-    const vacia = Object.entries(f).every(([k, v]) => k === "fila" || String(v ?? "").trim() === "");
-    if (vacia) return { fila: f.fila, vacia, errores, avisos, coincidencia: { tipo: "nuevo" } };
+    const vacia = Object.entries(f).every(
+      ([k, v]) => k === "fila" || k === "deCompras" || k === "deSalidas" || String(v ?? "").trim() === "",
+    );
+    if (vacia) return { fila: f.fila, deCompras, deSalidas, vacia, errores, avisos, coincidencia: { tipo: "nuevo" } };
 
     const codigo = f.codigoBarras.trim().replace(/\s/g, "");
     const plu = normalizarPlu(f.plu);
@@ -181,6 +250,7 @@ export function revisarFilas(
         if (mejor) coincidencia = { tipo: "parecido", productoId: mejor.p.id, nombre: mejor.p.nombre };
       }
     }
+    const existe = coincidencia.tipo === "codigo" || coincidencia.tipo === "plu" || coincidencia.tipo === "nombre";
 
     if (!nombre && coincidencia.tipo !== "codigo" && coincidencia.tipo !== "plu") {
       errores.push("Falta el nombre del producto.");
@@ -214,7 +284,10 @@ export function revisarFilas(
     const esBase = normalizarTexto(presentacion) === normalizarTexto(nombreBase);
     let factor = "1";
     if (f.factor.trim() === "") {
-      if (!esBase) errores.push(`Falta el factor: ¿cuántas ${nombreBase.toLowerCase()}es trae «${presentacion}»?`);
+      // En «Compras» y «Salidas», una presentación que ya existe en el producto no necesita factor.
+      if (!esBase && !((deCompras || deSalidas) && existe)) {
+        errores.push(`Falta el factor: ¿cuántas ${nombreBase.toLowerCase()}es trae «${presentacion}»?`);
+      }
     } else {
       const n = leerNumero(f.factor);
       if (!n || n.lte(0)) errores.push("El factor debe ser un número mayor que 0.");
@@ -237,44 +310,46 @@ export function revisarFilas(
       }
       return n.toString();
     };
-    let precioCompra = numero(f.precioCompra, "El precio de compra");
+    let precioCompra = numero(f.precioCompra, "El costo");
     const precioVenta = numero(f.precioVenta, "El precio de venta");
-    const stock = numero(f.stockInicial, "El stock inicial");
+    const stock = numero(f.stockInicial, deSalidas ? "Cuántos salieron" : deCompras ? "Cuántos entraron" : "El stock inicial");
+    let salida: { tipo: MotivoSalida; nota: string } | undefined;
+    if (deSalidas) {
+      const tipo = leerMotivo(f.motivo ?? "");
+      if (!existe) errores.push("Ese producto no está en Sandry: en «Salidas» solo van productos que ya tienes.");
+      if (!tipo) errores.push(`Motivo no válido. Usa: ${Object.values(MOTIVOS_SALIDA).join(", ")}.`);
+      if (stock !== null && dec(stock).isZero()) errores.push("Cuántos salieron debe ser mayor que 0.");
+      if (tipo && stock) {
+        salida = { tipo, nota: (f.nota ?? "").trim() };
+        avisos.push(`Se restarán ${stock} (${MOTIVOS_SALIDA[tipo]}).`);
+      }
+    }
     const stockMinimo = numero(f.stockMinimo, "El stock mínimo");
     if (precioCompra && !contexto.puedeVerCostos) {
-      avisos.push("No tienes permiso de costos: el precio de compra no se guardará.");
+      avisos.push("No tienes permiso de costos: el costo no se guardará.");
       precioCompra = null;
     }
-    if (!precioVenta) avisos.push("Sin precio de venta.");
+    if (!precioVenta && !existe && !deSalidas) avisos.push("Sin precio de venta.");
     if (precioCompra && precioVenta && dec(precioVenta).lt(precioCompra)) {
       avisos.push("El precio de venta es menor que el costo: se vendería a pérdida.");
     }
 
-    // Categoría y subcategoría
-    let categoria: string | null = f.categoria.trim() || null;
-    const subcategoria: string | null = f.subcategoria.trim() || null;
-    if (!categoria && subcategoria) {
-      const sola = buscarCategoria(contexto.categorias, subcategoria);
-      if (sola) categoria = contexto.categorias.find((c) => c.id === sola.padreId)?.nombre ?? null;
-      else errores.push("Hay subcategoría pero falta la categoría.");
-    }
+    const categoria: string | null = f.categoria.trim() || null;
     if (categoria) {
-      const madre = buscarCategoria(contexto.categorias, categoria, null) ?? buscarCategoria(contexto.categorias, categoria);
-      if (!madre) categoriasNuevas.add(categoria);
-      if (subcategoria && (!madre || !buscarCategoria(contexto.categorias, subcategoria, madre.id))) {
-        categoriasNuevas.add(`${categoria} → ${subcategoria}`);
-      }
-    } else if (coincidencia.tipo === "nuevo") {
+      if (!buscarCategoria(contexto.categorias, categoria)) categoriasNuevas.add(categoria);
+    } else if (!existe && !deSalidas) {
       avisos.push("Sin categoría.");
     }
 
     if (f.caducidad.trim()) avisos.push("La fecha de caducidad se registrará por lotes desde la fase 4; por ahora se marca «maneja caducidad».");
     if (f.proveedor.trim()) avisos.push("El proveedor se podrá guardar desde la fase 4.");
-    if (coincidencia.tipo === "nombre") avisos.push(`Parece ser «${coincidencia.nombre}», que ya existe: se actualizará.`);
+    if (coincidencia.tipo === "nombre" && !deCompras && !deSalidas) avisos.push(`Parece ser «${coincidencia.nombre}», que ya existe: se actualizará.`);
     if (coincidencia.tipo === "parecido") avisos.push(`¿Es «${coincidencia.nombre}»? Si es el mismo, márcalo para actualizarlo en vez de crear uno nuevo.`);
 
     return {
       fila: f.fila,
+      deCompras,
+      deSalidas,
       vacia,
       errores,
       avisos,
@@ -295,8 +370,8 @@ export function revisarFilas(
             stock,
             stockMinimo,
             categoria,
-            subcategoria,
             caducidad: Boolean(f.caducidad.trim()),
+            ...(salida ? { salida } : {}),
           },
     };
   });
@@ -321,17 +396,23 @@ export function textoDeCelda(valor: unknown): string {
 }
 
 /** Encuentra qué columna es cada dato según el título (tolerante a tildes y mayúsculas). */
-export function mapearEncabezados(titulos: string[]): Partial<Record<ClaveColumna, number>> {
-  const mapa: Partial<Record<ClaveColumna, number>> = {};
+export function mapearEncabezados(
+  titulos: string[],
+  columnas: readonly Columna[] = COLUMNAS_PRODUCTOS,
+): Partial<Record<string, number>> {
+  const mapa: Partial<Record<string, number>> = {};
   titulos.forEach((t, i) => {
     const n = normalizarTexto(t);
     // Se acepta el título actual y los de plantillas anteriores.
-    const col = COLUMNAS_PRODUCTOS.find(
-      (c) => normalizarTexto(c.titulo) === n || c.otros.some((o: string) => normalizarTexto(o) === n),
-    );
+    const col = columnas.find((c) => normalizarTexto(c.titulo) === n || c.otros.some((o) => normalizarTexto(o) === n));
     if (col && mapa[col.clave] === undefined) mapa[col.clave] = i;
   });
   return mapa;
+}
+
+/** Una fila vacía con todas las columnas (para armar filas de «Compras»). */
+export function filaVacia(fila: number): FilaProducto {
+  return { fila, ...Object.fromEntries(COLUMNAS_PRODUCTOS.map((c) => [c.clave, ""])) } as FilaProducto;
 }
 
 // ------------------------------------------------------------------ armar lo que se guarda
@@ -369,8 +450,8 @@ export type OpcionesArmado = {
   /** Filas «parecido» que la persona confirmó que son el mismo producto. */
   unirParecidos: Set<number>;
   actuales: Map<string, ProductoActual>;
-  /** Id de la categoría (ya creada si era nueva) para categoría + subcategoría. */
-  categoriaId: (categoria: string | null, subcategoria: string | null) => string | null;
+  /** Id de la categoría (ya creada si era nueva). */
+  categoriaId: (categoria: string | null) => string | null;
   /** IVA por defecto de una categoría (oculto; solo por si algún día se factura). */
   ivaDeCategoria: (categoriaId: string | null) => TarifaIva;
 };
@@ -389,7 +470,7 @@ type PresentacionPayload = {
 
 /**
  * Agrupa las filas por producto (una fila = una presentación) y arma lo que
- * recibe la función guardar_producto. El stock se convierte a unidad base.
+ * recibe la función importar_productos. El stock se convierte a unidad base.
  */
 export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesArmado) {
   const grupos = new Map<string, FilaRevisada[]>();
@@ -427,8 +508,13 @@ export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesAr
     }));
 
     let costoUnitario: string | null = null;
-    let stockTotal = dec(0);
+    let stockTotal = dec(0); // hoja «Productos»: cuántos hay
     let dijoStock = false;
+    let comprado = dec(0); // hoja «Compras»: cuántos entraron (unidad base)
+    const salidas: { tipo: MotivoSalida; cantidad: string; nota: string }[] = []; // hoja «Salidas»
+    let valorComprado = dec(0); // para el costo promedio de lo que entró
+    let compradoConCosto = dec(0);
+    let costoCompraNuevo: string | null = null;
     let categoriaId = actual?.categoriaId ?? null;
     let plu = actual?.plu ?? null;
     let stockMinimo = actual?.stockMinimo ?? "0";
@@ -438,6 +524,14 @@ export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesAr
       const d = f.datos!;
       const esBase = d.esBase || normalizarTexto(d.presentacion) === normalizarTexto(nombreBase);
       let p = presentaciones.find((x) => (esBase ? x.es_base : normalizarTexto(x.nombre) === normalizarTexto(d.presentacion)));
+      if (f.deSalidas) {
+        // Lo que salió se RESTA (en unidad base). No cambia nada más del producto.
+        if (d.salida && d.stock !== null) {
+          const cantidad = dec(d.stock).times(p?.factor ?? d.factor).toDecimalPlaces(3).toString();
+          salidas.push({ tipo: d.salida.tipo, cantidad, nota: d.salida.nota });
+        }
+        continue;
+      }
       if (!p) {
         p = {
           nombre: esBase ? nombreBase : d.presentacion,
@@ -457,17 +551,30 @@ export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesAr
         for (const otra of presentaciones) otra.codigos = otra.codigos.filter((c) => c !== d.codigo);
         p.codigos.push(d.codigo);
       }
-      if (costoUnitario === null && d.precioCompra !== null) {
-        // Costo por unidad base: costo de la presentación ÷ factor (jaba $9 ÷ 12 = $0.75).
-        costoUnitario = dec(d.precioCompra).dividedBy(p.factor).toDecimalPlaces(4).toString();
+      // Costo por unidad base: costo de la presentación ÷ factor (jaba $9 ÷ 12 = $0.75).
+      const costoBase = d.precioCompra !== null ? dec(d.precioCompra).dividedBy(p.factor).toDecimalPlaces(4) : null;
+
+      if (f.deCompras) {
+        // Lo que entró se SUMA; su costo entra al promedio (no lo reemplaza).
+        if (d.stock !== null && dec(d.stock).gt(0)) {
+          const cantidad = dec(d.stock).times(p.factor);
+          comprado = comprado.plus(cantidad);
+          if (costoBase) {
+            valorComprado = valorComprado.plus(cantidad.times(costoBase));
+            compradoConCosto = compradoConCosto.plus(cantidad);
+          }
+        }
+        if (costoCompraNuevo === null && costoBase) costoCompraNuevo = costoBase.toString();
+      } else {
+        if (costoUnitario === null && costoBase) costoUnitario = costoBase.toString();
+        if (d.stock !== null) {
+          stockTotal = stockTotal.plus(dec(d.stock).times(p.factor));
+          dijoStock = true;
+        }
+        if (d.stockMinimo !== null) stockMinimo = d.stockMinimo;
       }
-      if (d.stock !== null) {
-        stockTotal = stockTotal.plus(dec(d.stock).times(p.factor));
-        dijoStock = true;
-      }
-      if (d.categoria) categoriaId = opciones.categoriaId(d.categoria, d.subcategoria) ?? categoriaId;
+      if (d.categoria) categoriaId = opciones.categoriaId(d.categoria) ?? categoriaId;
       if (d.plu) plu = d.plu;
-      if (d.stockMinimo !== null) stockMinimo = d.stockMinimo;
       if (d.caducidad) caducidad = true;
     }
 
@@ -479,6 +586,9 @@ export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesAr
 
     if (actual) actualizados++;
     else nuevos++;
+
+    const texto = (n: ReturnType<typeof dec>) => n.toDecimalPlaces(3).toString();
+    const costoSumar = compradoConCosto.gt(0) ? valorComprado.dividedBy(compradoConCosto).toDecimalPlaces(4).toString() : null;
 
     productos.push({
       ...(actual ? { id: actual.id } : {}),
@@ -497,12 +607,22 @@ export function armarImportacion(revisadas: FilaRevisada[], opciones: OpcionesAr
       ubicacion: actual?.ubicacion ?? "",
       activo: actual?.activo ?? true,
       presentaciones: presentaciones.map((p, i) => ({ ...p, orden: i })),
-      costo_unitario: costoUnitario,
-      // Nuevo: «Cuántos tengo» es el stock inicial. Existente: es el stock REAL
-      // (si cambió se corrige como conteo; así descargar → editar → importar no duplica).
       ...(actual
-        ? { stock_real: dijoStock ? stockTotal.toDecimalPlaces(3).toString() : null }
-        : { stock_inicial: stockTotal.gt(0) ? stockTotal.toDecimalPlaces(3).toString() : null }),
+        ? {
+            costo_unitario: costoUnitario,
+            // «Cuántos tengo» = stock REAL (si cambió se corrige como conteo).
+            stock_real: dijoStock ? texto(stockTotal) : null,
+            // «Cuántos entraron» se suma, con su costo.
+            stock_sumar: comprado.gt(0) ? texto(comprado) : null,
+            costo_sumar: costoSumar,
+            // «Cuántos salieron» se resta (se dañó, caducó…).
+            ...(salidas.length ? { salidas } : {}),
+          }
+        : {
+            // Nuevo: empieza con lo que dice «Productos» + lo que entró en «Compras».
+            costo_unitario: costoUnitario ?? costoSumar ?? costoCompraNuevo,
+            stock_inicial: stockTotal.plus(comprado).gt(0) ? texto(stockTotal.plus(comprado)) : null,
+          }),
     });
   }
   return { productos, nuevos, actualizados };
@@ -520,45 +640,82 @@ export type ProductoParaExportar = {
   stockMinimo: string;
   stock: string;
   costo: string | null; // por unidad base; null si no hay permiso
-  presentaciones: { nombre: string; factor: string; precioVenta: string | null; esBase: boolean; codigos: string[] }[];
+  presentaciones: { nombre: string; factor: string; precioVenta: string | null; esBase: boolean; paraCompra: boolean; codigos: string[] }[];
 };
 
+type FilaExportada = Partial<Record<string, string | number>>;
 const numeroExcel = (v: string | null | undefined) => (v === null || v === undefined || v === "" ? "" : Number(v));
 
-/**
- * Filas para «Descargar mis productos», en el MISMO formato de la plantilla:
- * una fila por presentación. El stock va solo en la fila de la unidad base (en
- * unidades base) para que al volver a importar no se cuente dos veces.
- */
-export function filasParaExportar(
-  productos: ProductoParaExportar[],
-  categorias: CategoriaContexto[],
-): Partial<Record<ClaveColumna, string | number>>[] {
+function nombreCategoria(categorias: CategoriaContexto[], id: string | null): string {
   const porId = new Map(categorias.map((c) => [c.id, c]));
+  let c = id ? porId.get(id) : undefined;
+  while (c?.padreId) c = porId.get(c.padreId);
+  return c?.nombre ?? "";
+}
+
+function costoDe(p: ProductoParaExportar, factor: string): string | null {
+  return p.costo !== null && Number(p.costo) > 0 ? dec(p.costo).times(factor).toDecimalPlaces(4).toString() : null;
+}
+
+/**
+ * Filas de la hoja «Productos» para «Descargar mis productos»: una fila por
+ * presentación. El stock va solo en la fila de la unidad base (en unidades
+ * base) para que al volver a importar no se cuente dos veces.
+ */
+export function filasParaExportar(productos: ProductoParaExportar[], categorias: CategoriaContexto[]): FilaExportada[] {
   return productos.flatMap((p) => {
-    const cat = p.categoriaId ? porId.get(p.categoriaId) : undefined;
-    const madre = cat?.padreId ? porId.get(cat.padreId) : undefined;
     const comunes = {
-      categoria: madre?.nombre ?? cat?.nombre ?? "",
-      subcategoria: madre ? cat!.nombre : "",
+      categoria: nombreCategoria(categorias, p.categoriaId),
       nombre: p.nombre,
       marca: p.marca,
       plu: p.plu ?? "",
       unidadBase: p.unidadBase === "unidad" ? "" : p.unidadBase,
     };
     const nombreBase = UNIDADES[p.unidadBase].presentacionBase;
-    return p.presentaciones.map((x) => {
-      const costo = p.costo !== null && Number(p.costo) > 0 ? dec(p.costo).times(x.factor).toDecimalPlaces(4).toString() : null;
-      return {
-        ...comunes,
-        presentacion: x.esBase && normalizarTexto(x.nombre) === normalizarTexto(nombreBase) ? "" : x.nombre,
-        factor: x.esBase ? "" : numeroExcel(x.factor),
-        precioCompra: numeroExcel(costo),
-        precioVenta: numeroExcel(x.precioVenta),
-        stockInicial: x.esBase ? numeroExcel(p.stock) : "",
-        stockMinimo: x.esBase && Number(p.stockMinimo) > 0 ? numeroExcel(p.stockMinimo) : "",
-        codigoBarras: x.codigos[0] ?? "",
-      };
-    });
+    return p.presentaciones.map((x) => ({
+      ...comunes,
+      presentacion: x.esBase && normalizarTexto(x.nombre) === normalizarTexto(nombreBase) ? "" : x.nombre,
+      factor: x.esBase ? "" : numeroExcel(x.factor),
+      precioCompra: numeroExcel(costoDe(p, x.factor)),
+      precioVenta: numeroExcel(x.precioVenta),
+      stockInicial: x.esBase ? numeroExcel(p.stock) : "",
+      stockMinimo: x.esBase && Number(p.stockMinimo) > 0 ? numeroExcel(p.stockMinimo) : "",
+      codigoBarras: x.codigos[0] ?? "",
+    }));
   });
+}
+
+/**
+ * Filas de la hoja «Compras»: cada producto en cada forma en que se compra
+ * (unidad, jaba…), con su costo y precio. Solo falta escribir «Cuántos entraron».
+ */
+export function filasDeCompras(productos: ProductoParaExportar[], categorias: CategoriaContexto[]): FilaExportada[] {
+  return productos.flatMap((p) =>
+    p.presentaciones
+      .filter((x) => x.esBase || x.paraCompra)
+      .map((x) => ({
+        categoria: nombreCategoria(categorias, p.categoriaId),
+        nombre: p.nombre,
+        presentacion: x.nombre,
+        precioCompra: numeroExcel(costoDe(p, x.factor)),
+        precioVenta: numeroExcel(x.precioVenta),
+        stockInicial: "",
+        factor: x.esBase ? "" : numeroExcel(x.factor),
+      })),
+  );
+}
+
+/**
+ * Filas de la hoja «Salidas»: cada producto en su unidad base, listo para
+ * escribir cuántos salieron y por qué.
+ */
+export function filasDeSalidas(productos: ProductoParaExportar[], categorias: CategoriaContexto[]): FilaExportada[] {
+  return productos.map((p) => ({
+    categoria: nombreCategoria(categorias, p.categoriaId),
+    nombre: p.nombre,
+    presentacion: p.presentaciones.find((x) => x.esBase)?.nombre ?? UNIDADES[p.unidadBase].presentacionBase,
+    stockInicial: "",
+    motivo: "",
+    nota: "",
+  }));
 }
