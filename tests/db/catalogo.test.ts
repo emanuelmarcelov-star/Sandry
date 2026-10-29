@@ -38,9 +38,9 @@ function cocaCola(extra: Record<string, unknown> = {}) {
     stock_minimo: 12,
     retornable: false,
     presentaciones: [
-      { nombre: "Unidad", factor: 1, precio_venta: 1, es_base: true, codigos: ["7861001234567"] },
+      { nombre: "Unidad", factor: 1, precio_venta: 1, es_base: true, codigos: ["7861001234565"] },
       { nombre: "Paquete x6", factor: 6, precio_venta: 5.5, codigos: [] },
-      { nombre: "Jaba x12", factor: 12, precio_venta: 10.8, para_venta: true, codigos: ["17861001234564"] },
+      { nombre: "Jaba x12", factor: 12, precio_venta: 10.8, para_venta: true, codigos: ["17861001234562"] },
     ],
     costo_unitario: 0.75,
     stock_inicial: 24,
@@ -115,13 +115,13 @@ describe("crear un producto con presentaciones", () => {
   });
 
   test("el código de la jaba apunta a la jaba", async () => {
-    const { data } = await duena.from("codigos_barras").select("codigo, presentaciones(nombre)").eq("codigo", "17861001234564").single();
+    const { data } = await duena.from("codigos_barras").select("codigo, presentaciones(nombre)").eq("codigo", "17861001234562").single();
     expect((data?.presentaciones as unknown as { nombre: string }).nombre).toBe("Jaba x12");
   });
 
   test("un código de barras no puede pertenecer a dos productos", async () => {
     const { error } = await duena.rpc("guardar_producto", {
-      p: { nombre: "Otro", presentaciones: [{ nombre: "Unidad", factor: 1, es_base: true, codigos: ["7861001234567"] }] },
+      p: { nombre: "Otro", presentaciones: [{ nombre: "Unidad", factor: 1, es_base: true, codigos: ["7861001234565"] }] },
     });
     expect(error?.message).toContain("ya pertenece a «Coca-Cola 500 ml»");
   });
@@ -172,7 +172,7 @@ describe("cambios de precio", () => {
       p_presentaciones: ((await duena.from("presentaciones").select("id").eq("producto_id", idCola)).data ?? []).map((p) => p.id),
     });
     const { data: pres } = await duena.from("presentaciones").select("id, nombre, factor, precio_venta, es_base, para_venta, para_compra").eq("producto_id", idCola).order("factor");
-    const conIds = pres!.map((p) => ({ ...p, codigos: p.nombre === "Unidad" ? ["7861001234567"] : p.nombre === "Jaba x12" ? ["17861001234564"] : [] }));
+    const conIds = pres!.map((p) => ({ ...p, codigos: p.nombre === "Unidad" ? ["7861001234565"] : p.nombre === "Jaba x12" ? ["17861001234562"] : [] }));
     conIds[0].precio_venta = 1.05;
     const { error } = await duena.rpc("guardar_producto", { p: { ...cocaCola({ id: idCola }), presentaciones: conIds, stock_inicial: null } });
     expect(error).toBeNull();
@@ -225,7 +225,7 @@ describe("costo promedio ponderado", () => {
     c = (await duena.from("producto_costos").select("costo_promedio, ultimo_costo").eq("producto_id", idCola).single()).data!;
     expect([n(c.costo_promedio), n(c.ultimo_costo)]).toEqual([0.6, 0.9]);
     // Una venta no cambia el costo; el saldo baja.
-    const { data: saldo } = await a.rpc("registrar_movimiento", { p_producto: idCola, p_tipo: "venta", p_cantidad: -6, p_costo: null });
+    const { data: saldo } = await a.rpc("registrar_movimiento", { p_producto: idCola, p_tipo: "venta", p_cantidad: -6, p_costo: null as unknown as number });
     expect(n(saldo)).toBe(42);
   });
 

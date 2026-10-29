@@ -752,6 +752,7 @@ export type Database = {
         Args: { p_rol: string; p_usuario: string }
         Returns: undefined
       }
+      asignar_codigo_interno: { Args: { p_producto: string }; Returns: string }
       buscar_correo_por_dato: { Args: { p_dato: string }; Returns: string }
       buscar_productos: {
         Args: {
