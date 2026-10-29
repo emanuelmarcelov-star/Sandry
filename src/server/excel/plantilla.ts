@@ -23,9 +23,11 @@ function encabezado(hoja: ExcelJS.Worksheet, titulos: { titulo: string; ancho: n
   hoja.views = [{ state: "frozen", ySplit: 1 }];
 }
 
+/** Lista desplegable en toda una columna (sin crear filas vacías). */
 function lista(hoja: ExcelJS.Worksheet, columna: string, rango: string, mensaje: string) {
-  for (let fila = 2; fila <= FILAS_CON_LISTAS; fila++) {
-    hoja.getCell(`${columna}${fila}`).dataValidation = {
+  (hoja as unknown as { dataValidations: { add: (rango: string, v: ExcelJS.DataValidation) => void } }).dataValidations.add(
+    `${columna}2:${columna}${FILAS_CON_LISTAS}`,
+    {
       type: "list",
       allowBlank: true,
       formulae: [rango],
@@ -33,8 +35,8 @@ function lista(hoja: ExcelJS.Worksheet, columna: string, rango: string, mensaje:
       errorStyle: "warning",
       errorTitle: "Valor no está en la lista",
       error: mensaje,
-    };
-  }
+    },
+  );
 }
 
 /** Plantilla para cargar productos, compras y gastos desde Excel. */
@@ -50,7 +52,7 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
     ["Plantilla de Sandry", true],
     ["", false],
     ["Cómo usarla", true],
-    ["1. Llena la hoja «Productos»: una fila por cada presentación (unidad, paquete, jaba, libra...).", false],
+    ["1. Llena la hoja «Productos»: una fila por cada presentación (unidad, paquete, jaba, libra...). Mira la hoja «Ejemplos» para guiarte.", false],
     ["2. Si un producto se vende de varias formas, repite el nombre en varias filas (una por presentación).", false],
     ["3. Las columnas con flechita tienen una lista para elegir (categoría, unidad, IVA, cuentas...).", false],
     ["4. Guarda el archivo y súbelo en Sandry → Catálogo → Importar. Antes de guardar verás una vista previa.", false],
@@ -98,8 +100,12 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
   const rango = (col: string, n: number) => `Listas!$${col}$1:$${col}$${Math.max(n, 1)}`;
 
   // ---------------------------------------------------------------- Productos
+  // La hoja «Productos» va vacía (lista para llenar). Los ejemplos van en su
+  // propia hoja para que nunca se importen por error.
   const prod = libro.addWorksheet("Productos");
   encabezado(prod, COLUMNAS_PRODUCTOS.map((c) => ({ titulo: c.titulo, ancho: c.ancho })));
+  const ejemplosHoja = libro.addWorksheet("Ejemplos", { properties: { tabColor: { argb: "FFB45309" } } });
+  encabezado(ejemplosHoja, COLUMNAS_PRODUCTOS.map((c) => ({ titulo: c.titulo, ancho: c.ancho })));
   const ejemplos = [
     ["7861001234565", "", "Coca-Cola 500 ml", "Coca-Cola", "Bebidas", "Gaseosas", "unidad", "Unidad", 1, 0.75, 1, "15%", 24, 12, "", "Coca-Cola"],
     ["17861001234562", "", "Coca-Cola 500 ml", "Coca-Cola", "Bebidas", "Gaseosas", "unidad", "Jaba x12", 12, 9, 10.8, "15%", 0, "", "", "Coca-Cola"],
@@ -109,11 +115,10 @@ export async function crearPlantilla(categorias: Categoria[]): Promise<Buffer> {
     ["", "30", "Caramelo de leche", "", "Golosinas y snacks", "Caramelos", "unidad", "Unidad", 1, "", 0.05, "15%", "", "", "", ""],
     ["", "30", "Caramelo de leche", "", "Golosinas y snacks", "Caramelos", "unidad", "Funda x100", 100, 2, 4, "15%", 3, 50, "", "Mayorista"],
   ];
-  ejemplos.forEach((e) => prod.addRow(e));
-  for (let f = 2; f <= ejemplos.length + 1; f++) prod.getRow(f).font = { italic: true, color: { argb: "FF64748B" } };
-  prod.getCell("Q1").value = "← Las filas grises son EJEMPLOS: bórralas o reemplázalas.";
-  prod.getCell("Q1").font = { bold: true, color: { argb: "FFB45309" } };
-  prod.getColumn(17).width = 50;
+  ejemplos.forEach((e) => ejemplosHoja.addRow(e));
+  ejemplosHoja.getCell("Q1").value = "← Solo ejemplos para guiarte: esta hoja NO se importa. Llena la hoja «Productos».";
+  ejemplosHoja.getCell("Q1").font = { bold: true, color: { argb: "FFB45309" } };
+  ejemplosHoja.getColumn(17).width = 60;
   lista(prod, "E", rango("A", raices.length), "Elige una categoría de la lista o escribe una nueva.");
   lista(prod, "F", rango("B", hijas.length), "Elige una subcategoría de la lista o escribe una nueva.");
   lista(prod, "G", rango("C", 4), "Usa unidad, libra, kilo o litro.");

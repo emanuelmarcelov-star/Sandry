@@ -8,7 +8,7 @@ Orden real: 1 → 2 → 3 → 4 → 5 → 6 → 8 → 7.
 |---|---|
 | 1. Preparación | ✅ Aprobada el 28/10/2026 — https://storied-raindrop-2de6ba.netlify.app |
 | 2. Usuarios | ✅ Aprobada el 28/10/2026 |
-| 3. Catálogo | En curso |
+| 3. Catálogo | Lista para probar (ver docs/FASE-3.md) |
 
 ---
 

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { CAJERA, CONTRASENA, DUENA, entrar } from "./datos";
 
 /*
  * Flujo completo de usuarios, como lo haría la tienda:
@@ -7,10 +8,6 @@ import { expect, test, type Page } from "@playwright/test";
  * Las pruebas van en orden y comparten la base de pruebas.
  */
 test.describe.configure({ mode: "serial" });
-
-const DUENA = { nombre: "Rosa Pérez", correo: "rosa@e2e.sandry.test", telefono: "0991234567" };
-const CAJERA = { nombre: "Ana Torres", correo: "ana@e2e.sandry.test", telefono: "0987654321", cedula: "1710034065" };
-const CONTRASENA = "Clave-Segura-1";
 
 async function registrar(page: Page, p: { nombre: string; correo: string; telefono: string; cedula?: string }) {
   await page.goto("/registro");
@@ -21,15 +18,6 @@ async function registrar(page: Page, p: { nombre: string; correo: string; telefo
   await page.getByLabel("Contraseña", { exact: true }).fill(CONTRASENA);
   await page.getByLabel("Repite la contraseña").fill(CONTRASENA);
   await page.getByRole("button", { name: "Crear cuenta" }).click();
-}
-
-async function entrar(page: Page, correo: string, recordar = true, esperar = true) {
-  await page.goto("/entrar");
-  await page.getByLabel("Correo").fill(correo);
-  await page.getByLabel("Contraseña").fill(CONTRASENA);
-  if (!recordar) await page.getByLabel("Recordarme en este dispositivo").uncheck();
-  await page.getByRole("button", { name: "Entrar", exact: true }).click();
-  if (esperar) await page.waitForURL((u) => !u.pathname.startsWith("/entrar"));
 }
 
 async function abrirMenu(page: Page) {

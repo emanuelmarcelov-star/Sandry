@@ -204,6 +204,50 @@ export async function buscarProductos(
   return filas.map((f) => armar(f, costos));
 }
 
+/** Una etiqueta: una presentación con su precio y código. */
+export type ItemEtiqueta = {
+  presentacionId: string;
+  productoId: string;
+  nombre: string;
+  presentacion: string;
+  esBase: boolean;
+  precio: string | null;
+  codigo: string | null;
+  plu: string | null;
+};
+
+export function itemsDeEtiqueta(productos: ProductoCompleto[]): ItemEtiqueta[] {
+  return productos.flatMap((p) =>
+    p.presentaciones
+      .filter((x) => x.paraVenta)
+      .map((x) => ({
+        presentacionId: x.id,
+        productoId: p.id,
+        nombre: p.nombre,
+        presentacion: x.nombre,
+        esBase: x.esBase,
+        precio: x.precioVenta,
+        codigo: x.codigos[0] ?? null,
+        plu: p.plu,
+      })),
+  );
+}
+
+/** Presentaciones cuyo precio cambió y todavía no se reimprimió su etiqueta. */
+export async function etiquetasPendientes(usuario: UsuarioActual): Promise<ItemEtiqueta[]> {
+  const supabase = await clienteServidor();
+  const { data } = await supabase.from("etiquetas_pendientes").select("presentacion_id, producto_id").order("desde");
+  if (!data?.length) return [];
+  const pendientes = new Set(data.map((d) => d.presentacion_id));
+  const ids = Array.from(new Set(data.map((d) => d.producto_id)));
+  const productos: ProductoCompleto[] = [];
+  for (const id of ids) {
+    const p = await obtenerProducto(id, usuario);
+    if (p?.activo) productos.push(p);
+  }
+  return itemsDeEtiqueta(productos).filter((i) => pendientes.has(i.presentacionId));
+}
+
 export function urlFotoProducto(ruta: string | null): string | null {
   if (!ruta) return null;
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;

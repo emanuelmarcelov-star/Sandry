@@ -24,7 +24,7 @@ import {
 import type { TarifaIva } from "@/lib/catalogo";
 import type { Json } from "@/lib/supabase/tipos";
 import { puede, requerirPermiso } from "@/server/sesion";
-import { buscarProductos, listarCategorias, valoresEfectivos } from "@/server/catalogo";
+import { buscarProductos, itemsDeEtiqueta, listarCategorias, valoresEfectivos, type ItemEtiqueta } from "@/server/catalogo";
 
 const numero = (t: string) => (t.trim() === "" ? null : leerNumero(t)!.toString());
 
@@ -101,6 +101,13 @@ export async function asignarCodigosInternos(productoIds: string[]): Promise<Res
   }
   revalidatePath("/catalogo", "layout");
   return { ok: true, datos: { codigos } };
+}
+
+/** Búsqueda para agregar productos a la lista de etiquetas. */
+export async function buscarParaEtiquetas(texto: string): Promise<ItemEtiqueta[]> {
+  const yo = await requerirPermiso("productos.editar");
+  if (!texto.trim()) return [];
+  return itemsDeEtiqueta(await buscarProductos(yo, { texto, limite: 15 }));
 }
 
 export async function marcarEtiquetasImpresas(presentacionIds: string[]): Promise<Resultado> {

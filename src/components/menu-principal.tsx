@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { History, Home, KeyRound, LogOut, Menu, Settings, ShieldCheck, UserRound, Users, X } from "lucide-react";
+import { History, Home, KeyRound, LogOut, Menu, Package, Settings, ShieldCheck, UserRound, Users, X } from "lucide-react";
 import { useCambiarTema } from "@/components/tema";
 import { textos } from "@/lib/textos";
 import { cn } from "cn";
@@ -12,7 +12,7 @@ const t = textos.menu;
 
 export type OpcionMenu = { href: string; etiqueta: string; icono: keyof typeof ICONOS };
 
-const ICONOS = { Home, Users, ShieldCheck, History, Settings, UserRound };
+const ICONOS = { Home, Package, Users, ShieldCheck, History, Settings, UserRound };
 
 /** Botón "Menú" con las secciones permitidas, cambio de usuario, tema y salir. */
 export function MenuPrincipal({ nombre, rol, opciones }: { nombre: string; rol: string; opciones: OpcionMenu[] }) {
@@ -52,7 +52,7 @@ export function MenuPrincipal({ nombre, rol, opciones }: { nombre: string; rol: 
               {opciones.map(({ href, etiqueta, icono }) => {
                 const Icono = ICONOS[icono];
                 return (
-                  <Link key={href} href={href} onClick={() => setAbierto(false)} className={cn(claseOpcion, ruta === href && "bg-muted font-semibold")}>
+                  <Link key={href} href={href} onClick={() => setAbierto(false)} className={cn(claseOpcion, (ruta === href || (href !== "/" && ruta.startsWith(href + "/"))) && "bg-muted font-semibold")}>
                     <Icono className="size-6" aria-hidden />
                     {etiqueta}
                   </Link>

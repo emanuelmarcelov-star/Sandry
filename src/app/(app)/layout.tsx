@@ -5,7 +5,7 @@ import { MenuPrincipal, type OpcionMenu } from "@/components/menu-principal";
 import { VigilanteInactividad } from "@/components/vigilante-inactividad";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { puede, requerirUsuarioActivo } from "@/server/sesion";
-import { textos } from "@/lib/textos";
+import { textos, textosCatalogo } from "@/lib/textos";
 
 const t = textos.menu;
 
@@ -34,6 +34,7 @@ async function MenuDeLaPersona() {
   const { data: ajustes } = await supabase.from("ajustes").select("minutos_inactividad").maybeSingle();
 
   const opciones: OpcionMenu[] = [{ href: "/", etiqueta: t.inicio, icono: "Home" }];
+  if (puede(usuario, "productos.ver")) opciones.push({ href: "/catalogo", etiqueta: textosCatalogo.menu, icono: "Package" });
   if (puede(usuario, "usuarios.gestionar")) {
     opciones.push({ href: "/usuarios", etiqueta: t.usuarios, icono: "Users" });
     opciones.push({ href: "/usuarios/roles", etiqueta: t.roles, icono: "ShieldCheck" });

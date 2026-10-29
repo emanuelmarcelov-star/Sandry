@@ -128,3 +128,31 @@
     @apply font-sans;
   }
 }
+/* ---------------------------------------------------------------------------
+   Impresión: solo se imprime lo que está dentro de .zona-impresion
+   (etiquetas, hoja de códigos, tickets). El resto de la pantalla se oculta.
+--------------------------------------------------------------------------- */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .zona-impresion,
+  .zona-impresion * {
+    visibility: visible;
+  }
+  .zona-impresion {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
+.zona-impresion svg {
+  width: 100%;
+  height: 100%;
+}

@@ -54,6 +54,23 @@ Open Food Facts · decimal.js · Vitest + Playwright.
   no aceptan insert/update directos desde el navegador.
 - Códigos de permiso en la tabla `permisos` (p. ej. `costos.ver`, `reportes.ver`); las
   fases siguientes usan esos mismos códigos.
+
+## Catálogo (fase 3)
+
+- Escritura SOLO por `guardar_producto(jsonb)` / `guardar_categoria(jsonb)` /
+  `importar_productos(jsonb)`: validan permisos (`productos.editar`, `precios.cambiar`,
+  `costos.ver`), guardan historial de precios/costos, bitácora y etiquetas por reimprimir.
+- Stock: tabla `existencias` (unidad base) + kardex `movimientos_stock`. Todo movimiento
+  pasa por `registrar_movimiento()` (interna; recalcula el costo promedio ponderado).
+  Las fases 4 y 5 (compras, ventas, ajustes) deben usar esa misma función.
+- Costos en `producto_costos` (RLS `costos.ver`). Lecturas del servidor en `src/server/catalogo.ts`.
+- Búsqueda: `buscar_productos()` (pg_trgm + unaccent, texto en `productos.texto_busqueda`).
+- Cálculos (margen sobre costo, sugerido, IVA, GTIN): `src/lib/catalogo.ts`.
+- Excel: revisión/armado puro y compartido en `src/lib/excel/productos.ts`; plantilla en
+  `src/server/excel/plantilla.ts` (hoja «Productos» vacía + «Ejemplos» que NO se importa).
+- Impresión: todo lo imprimible va dentro de `.zona-impresion` (CSS en `globals.css`) y
+  cada pantalla define su `@page`. Códigos dibujados con `bwip-js` (`components/codigo-barras.tsx`).
+- Pruebas e2e: proyectos de Playwright en orden (usuarios → catálogo) sobre la base de pruebas.
 - En esta PC, si la terminal no encuentra `node`/`git`, recargar el PATH:
   `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`
 

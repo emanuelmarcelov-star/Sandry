@@ -15,6 +15,15 @@ export const UNIDADES: Record<UnidadBase, { nombre: string; presentacionBase: st
   litro: { nombre: "Litro", presentacionBase: "Litro", decimales: true },
 };
 
+const PLURALES: Record<UnidadBase, string> = { unidad: "unidades", libra: "libras", kilo: "kilos", litro: "litros" };
+
+/** "1 unidad", "24 unidades", "3,5 libras". */
+export function cantidadConUnidad(cantidad: Decimal.Value, unidad: UnidadBase): string {
+  const n = dec(cantidad);
+  const texto = Number(n.toDecimalPlaces(3).toString()).toLocaleString("es-EC", { maximumFractionDigits: 3 });
+  return `${texto} ${n.eq(1) ? UNIDADES[unidad].nombre.toLowerCase() : PLURALES[unidad]}`;
+}
+
 export const TARIFAS_IVA: Record<TarifaIva, { nombre: string; tasa: Dec }> = {
   "15": { nombre: "IVA 15%", tasa: dec("0.15") },
   "0": { nombre: "IVA 0%", tasa: dec(0) },

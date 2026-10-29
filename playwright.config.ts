@@ -5,7 +5,8 @@ import { defineConfig, devices } from "@playwright/test";
 if (existsSync(".env.test.local")) process.loadEnvFile(".env.test.local");
 
 // Corren contra la versión de producción (build + start), una a la vez porque
-// comparten la misma base de datos.
+// comparten la misma base de datos. El orden importa: usuarios crea a la
+// administradora que después usa catálogo.
 export default defineConfig({
   testDir: "tests/e2e",
   workers: 1,
@@ -19,7 +20,9 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
   },
   projects: [
-    { name: "pc", use: { ...devices["Desktop Chrome"] } },
-    { name: "celular", use: { ...devices["Pixel 7"] }, testMatch: /inicio\.spec\.ts/ },
+    { name: "inicio-pc", use: { ...devices["Desktop Chrome"] }, testMatch: /inicio\.spec\.ts/ },
+    { name: "inicio-celular", use: { ...devices["Pixel 7"] }, testMatch: /inicio\.spec\.ts/ },
+    { name: "usuarios", use: { ...devices["Desktop Chrome"] }, testMatch: /usuarios\.spec\.ts/ },
+    { name: "catalogo", use: { ...devices["Desktop Chrome"] }, testMatch: /catalogo\.spec\.ts/, dependencies: ["usuarios"] },
   ],
 });
