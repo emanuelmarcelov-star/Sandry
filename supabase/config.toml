@@ -424,16 +424,16 @@ site_url = "https://storied-raindrop-2de6ba.netlify.app"
 additional_redirect_urls = ["https://storied-raindrop-2de6ba.netlify.app/**"]
 
 # Correos en español: Supabase solo permite cambiarlos con un SMTP propio (Gmail de la tienda).
-# Se activan quitando el # cuando el SMTP esté configurado en el proyecto de la tienda.
-# [remotes.produccion.auth.email.template.recovery]
-# subject = "Sandry: crea una contraseña nueva"
-# content_path = "./supabase/plantillas/recuperar.html"
+# Activados el 28/10/2026 (SMTP de Gmail configurado en el proyecto de la tienda).
+[remotes.produccion.auth.email.template.recovery]
+subject = "Sandry: crea una contraseña nueva"
+content_path = "./supabase/plantillas/recuperar.html"
 
-# [remotes.produccion.auth.email.template.invite]
-# subject = "Te invitaron a Sandry"
-# content_path = "./supabase/plantillas/invitacion.html"
+[remotes.produccion.auth.email.template.invite]
+subject = "Te invitaron a Sandry"
+content_path = "./supabase/plantillas/invitacion.html"
 
-# [remotes.produccion.auth.email.template.confirmation]
-# subject = "Sandry: confirma tu correo"
-# content_path = "./supabase/plantillas/confirmar.html"
+[remotes.produccion.auth.email.template.confirmation]
+subject = "Sandry: confirma tu correo"
+content_path = "./supabase/plantillas/confirmar.html"
 

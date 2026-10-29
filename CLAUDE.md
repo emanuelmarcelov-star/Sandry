@@ -111,7 +111,10 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
   Visibilidad: producción pública, deploy previews privados.
 - Base de datos de la tienda: Supabase `csupvenhzqgyybyvznpc` (región us-west-2).
 - Base de pruebas: Supabase `Sandry-pruebas` (`fhehdhpkxqtmeotaxmgm`, us-west-2).
-- Variables en Netlify: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+- Variables en Netlify: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+  `SUPABASE_SECRET_KEY` (secreta, solo contexto Production; clave "netlify" en Supabase).
+- Correo de la tienda (SMTP de Supabase vía Gmail con contraseña de aplicación):
+  `tiendasandry.ec@gmail.com`.
 
 ## Pendientes de verificar (SRI / servicios)
 
