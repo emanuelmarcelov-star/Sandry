@@ -79,9 +79,9 @@ Para que lleguen los correos de «Olvidé mi contraseña» y las invitaciones:
    - **Sender email**: el Gmail de la tienda
    - **Sender name**: `Sandry`
    - **Host**: `smtp.gmail.com`
-   - **Port**: `587`
+   - **Port**: `465`
    - **Username**: el Gmail de la tienda
-   - **Password**: las 16 letras de la contraseña de aplicación (sin espacios)
+   - **Password**: las 16 letras de la contraseña de aplicación, todas juntas y sin espacios
 5. Toca **Save**.
 6. Avísame: yo activo los correos en español (ya están listos).
 
