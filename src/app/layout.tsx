@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AvisoSinConexion, RegistroServiceWorker } from "@/components/pwa";
+import { ProveedorTema } from "@/components/tema";
+import { Toaster } from "@/components/ui/sonner";
 import { textos } from "@/lib/textos";
 import "./globals.css";
 
@@ -31,12 +33,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es-EC"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AvisoSinConexion />
-        <RegistroServiceWorker />
-        {children}
+        <ProveedorTema>
+          <AvisoSinConexion />
+          <RegistroServiceWorker />
+          {children}
+          <Toaster position="top-center" richColors />
+        </ProveedorTema>
       </body>
     </html>
   );

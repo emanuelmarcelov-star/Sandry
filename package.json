@@ -9,10 +9,13 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "test:db": "vitest run --config vitest.db.config.mts",
+    "db:tipos": "supabase gen types typescript --linked > src/lib/supabase/tipos.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "@hookform/resolvers": "^6.0.2",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "class-variance-authority": "^0.7.1",
@@ -20,10 +23,13 @@
     "decimal.js": "^10.6.0",
     "lucide-react": "^1.63.0",
     "next": "16.4.3",
+    "next-themes": "^0.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "react-hook-form": "^7.91.0",
     "server-only": "^0.0.1",
     "shadcn": "^4.23.0",
+    "sonner": "^2.0.8",
     "tw-animate-css": "^1.4.0",
     "zod": "^4.6.7"
   },
@@ -36,6 +42,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "jsdom": "^30.1.3",
+    "supabase": "^2.122.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.5"
