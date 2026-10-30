@@ -39,10 +39,76 @@ export type Database = {
   }
   public: {
     Tables: {
+      abonos: {
+        Row: {
+          caja_id: string | null
+          cliente_id: string
+          fecha: string
+          forma_pago_id: string
+          id: number
+          monto: number
+          nota: string
+          usuario_id: string | null
+        }
+        Insert: {
+          caja_id?: string | null
+          cliente_id: string
+          fecha?: string
+          forma_pago_id: string
+          id?: never
+          monto: number
+          nota?: string
+          usuario_id?: string | null
+        }
+        Update: {
+          caja_id?: string | null
+          cliente_id?: string
+          fecha?: string
+          forma_pago_id?: string
+          id?: never
+          monto?: number
+          nota?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abonos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abonos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abonos_forma_pago_id_fkey"
+            columns: ["forma_pago_id"]
+            isOneToOne: false
+            referencedRelation: "formas_pago"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abonos_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ajustes: {
         Row: {
           actualizado_en: string
+          alcohol_desde: string | null
+          alcohol_hasta: string | null
+          banco: Json
           descuento_max_sin_autorizacion: number
+          deuna_qr_ruta: string | null
           dias_aviso_caducidad: number
           dias_sin_movimiento: number
           id: number
@@ -50,10 +116,17 @@ export type Database = {
           minutos_inactividad: number
           nombre_tienda: string
           redondeo_precio: number
+          ticket_ancho: number
+          ticket_mensaje: string
+          venta_sin_stock: string
         }
         Insert: {
           actualizado_en?: string
+          alcohol_desde?: string | null
+          alcohol_hasta?: string | null
+          banco?: Json
           descuento_max_sin_autorizacion?: number
+          deuna_qr_ruta?: string | null
           dias_aviso_caducidad?: number
           dias_sin_movimiento?: number
           id?: number
@@ -61,10 +134,17 @@ export type Database = {
           minutos_inactividad?: number
           nombre_tienda?: string
           redondeo_precio?: number
+          ticket_ancho?: number
+          ticket_mensaje?: string
+          venta_sin_stock?: string
         }
         Update: {
           actualizado_en?: string
+          alcohol_desde?: string | null
+          alcohol_hasta?: string | null
+          banco?: Json
           descuento_max_sin_autorizacion?: number
+          deuna_qr_ruta?: string | null
           dias_aviso_caducidad?: number
           dias_sin_movimiento?: number
           id?: number
@@ -72,6 +152,9 @@ export type Database = {
           minutos_inactividad?: number
           nombre_tienda?: string
           redondeo_precio?: number
+          ticket_ancho?: number
+          ticket_mensaje?: string
+          venta_sin_stock?: string
         }
         Relationships: []
       }
@@ -107,6 +190,66 @@ export type Database = {
           {
             foreignKeyName: "bitacora_usuario_id_fkey"
             columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cajas: {
+        Row: {
+          abierta_en: string
+          abierta_por: string | null
+          cerrada_en: string | null
+          cerrada_por: string | null
+          contado: number | null
+          conteo: Json | null
+          diferencia: number | null
+          esperado: number | null
+          estado: string
+          fondo: number
+          id: string
+          nota: string
+        }
+        Insert: {
+          abierta_en?: string
+          abierta_por?: string | null
+          cerrada_en?: string | null
+          cerrada_por?: string | null
+          contado?: number | null
+          conteo?: Json | null
+          diferencia?: number | null
+          esperado?: number | null
+          estado?: string
+          fondo: number
+          id?: string
+          nota?: string
+        }
+        Update: {
+          abierta_en?: string
+          abierta_por?: string | null
+          cerrada_en?: string | null
+          cerrada_por?: string | null
+          contado?: number | null
+          conteo?: Json | null
+          diferencia?: number | null
+          esperado?: number | null
+          estado?: string
+          fondo?: number
+          id?: string
+          nota?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cajas_abierta_por_fkey"
+            columns: ["abierta_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cajas_cerrada_por_fkey"
+            columns: ["cerrada_por"]
             isOneToOne: false
             referencedRelation: "perfiles"
             referencedColumns: ["id"]
@@ -181,6 +324,45 @@ export type Database = {
           id?: string
           nombre?: string
           orden?: number
+        }
+        Relationships: []
+      }
+      clientes: {
+        Row: {
+          activo: boolean
+          correo: string
+          creado_en: string
+          direccion: string
+          id: string
+          identificacion: string
+          limite_credito: number
+          nombre: string
+          notas: string
+          telefono: string
+        }
+        Insert: {
+          activo?: boolean
+          correo?: string
+          creado_en?: string
+          direccion?: string
+          id?: string
+          identificacion?: string
+          limite_credito?: number
+          nombre: string
+          notas?: string
+          telefono?: string
+        }
+        Update: {
+          activo?: boolean
+          correo?: string
+          creado_en?: string
+          direccion?: string
+          id?: string
+          identificacion?: string
+          limite_credito?: number
+          nombre?: string
+          notas?: string
+          telefono?: string
         }
         Relationships: []
       }
@@ -514,6 +696,71 @@ export type Database = {
         }
         Relationships: []
       }
+      devoluciones: {
+        Row: {
+          autorizado_por: string | null
+          cuenta_id: string | null
+          fecha: string
+          id: number
+          lineas: Json
+          monto: number
+          motivo: string
+          usuario_id: string | null
+          venta_id: string
+        }
+        Insert: {
+          autorizado_por?: string | null
+          cuenta_id?: string | null
+          fecha?: string
+          id?: never
+          lineas: Json
+          monto: number
+          motivo: string
+          usuario_id?: string | null
+          venta_id: string
+        }
+        Update: {
+          autorizado_por?: string | null
+          cuenta_id?: string | null
+          fecha?: string
+          id?: never
+          lineas?: Json
+          monto?: number
+          motivo?: string
+          usuario_id?: string | null
+          venta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devoluciones_autorizado_por_fkey"
+            columns: ["autorizado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_dinero"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dispositivo_usuarios: {
         Row: {
           dispositivo_id: string
@@ -630,6 +877,41 @@ export type Database = {
             columns: ["producto_id"]
             isOneToOne: true
             referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      formas_pago: {
+        Row: {
+          activa: boolean
+          codigo_sri: string
+          cuenta_id: string | null
+          id: string
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          activa?: boolean
+          codigo_sri?: string
+          cuenta_id?: string | null
+          id: string
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          activa?: boolean
+          codigo_sri?: string
+          cuenta_id?: string | null
+          id?: string
+          nombre?: string
+          orden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formas_pago_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_dinero"
             referencedColumns: ["id"]
           },
         ]
@@ -756,6 +1038,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      intentos_autorizacion: {
+        Row: {
+          fecha: string
+          id: number
+          usuario_id: string
+        }
+        Insert: {
+          fecha?: string
+          id?: never
+          usuario_id: string
+        }
+        Update: {
+          fecha?: string
+          id?: never
+          usuario_id?: string
+        }
+        Relationships: []
       }
       intentos_recuperar_correo: {
         Row: {
@@ -1501,6 +1801,234 @@ export type Database = {
         }
         Relationships: []
       }
+      venta_linea_costos: {
+        Row: {
+          costo_total: number
+          costo_unitario: number
+          linea_id: number
+        }
+        Insert: {
+          costo_total: number
+          costo_unitario: number
+          linea_id: number
+        }
+        Update: {
+          costo_total?: number
+          costo_unitario?: number
+          linea_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venta_linea_costos_linea_id_fkey"
+            columns: ["linea_id"]
+            isOneToOne: true
+            referencedRelation: "venta_lineas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venta_lineas: {
+        Row: {
+          cantidad: number
+          descripcion: string
+          descuento: number
+          devuelto: number
+          factor: number
+          id: number
+          precio: number
+          presentacion_id: string | null
+          producto_id: string | null
+          revisar: boolean
+          total: number
+          venta_id: string
+        }
+        Insert: {
+          cantidad: number
+          descripcion: string
+          descuento?: number
+          devuelto?: number
+          factor?: number
+          id?: never
+          precio: number
+          presentacion_id?: string | null
+          producto_id?: string | null
+          revisar?: boolean
+          total: number
+          venta_id: string
+        }
+        Update: {
+          cantidad?: number
+          descripcion?: string
+          descuento?: number
+          devuelto?: number
+          factor?: number
+          id?: never
+          precio?: number
+          presentacion_id?: string | null
+          producto_id?: string | null
+          revisar?: boolean
+          total?: number
+          venta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venta_lineas_presentacion_id_fkey"
+            columns: ["presentacion_id"]
+            isOneToOne: false
+            referencedRelation: "presentaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_lineas_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venta_pagos: {
+        Row: {
+          cambio: number | null
+          forma_pago_id: string
+          id: number
+          monto: number
+          recibido: number | null
+          referencia: string
+          venta_id: string
+        }
+        Insert: {
+          cambio?: number | null
+          forma_pago_id: string
+          id?: never
+          monto: number
+          recibido?: number | null
+          referencia?: string
+          venta_id: string
+        }
+        Update: {
+          cambio?: number | null
+          forma_pago_id?: string
+          id?: never
+          monto?: number
+          recibido?: number | null
+          referencia?: string
+          venta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venta_pagos_forma_pago_id_fkey"
+            columns: ["forma_pago_id"]
+            isOneToOne: false
+            referencedRelation: "formas_pago"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_pagos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ventas: {
+        Row: {
+          anulada_en: string | null
+          anulada_por: string | null
+          autorizado_por: string | null
+          caja_id: string | null
+          cliente_id: string | null
+          descuento: number
+          estado: string
+          fecha: string
+          id: string
+          motivo_anulacion: string | null
+          nota: string
+          numero: number
+          subtotal: number
+          total: number
+          usuario_id: string | null
+        }
+        Insert: {
+          anulada_en?: string | null
+          anulada_por?: string | null
+          autorizado_por?: string | null
+          caja_id?: string | null
+          cliente_id?: string | null
+          descuento?: number
+          estado?: string
+          fecha?: string
+          id: string
+          motivo_anulacion?: string | null
+          nota?: string
+          numero?: never
+          subtotal: number
+          total: number
+          usuario_id?: string | null
+        }
+        Update: {
+          anulada_en?: string | null
+          anulada_por?: string | null
+          autorizado_por?: string | null
+          caja_id?: string | null
+          cliente_id?: string | null
+          descuento?: number
+          estado?: string
+          fecha?: string
+          id?: string
+          motivo_anulacion?: string | null
+          nota?: string
+          numero?: never
+          subtotal?: number
+          total?: number
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ventas_anulada_por_fkey"
+            columns: ["anulada_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_autorizado_por_fkey"
+            columns: ["autorizado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       viaje_lista: {
         Row: {
           cantidad: number | null
@@ -1587,6 +2115,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      abrir_caja: { Args: { p_fondo: number }; Returns: string }
       actualizar_ajustes: {
         Args: {
           p_descuento_max: number
@@ -1633,6 +2162,7 @@ export type Database = {
         Returns: undefined
       }
       asignar_codigo_interno: { Args: { p_producto: string }; Returns: string }
+      autorizar: { Args: { p_permiso: string; p_pin: string }; Returns: string }
       buscar_correo_por_dato: { Args: { p_dato: string }; Returns: string }
       buscar_productos: {
         Args: {
@@ -1683,6 +2213,25 @@ export type Database = {
         Args: { p_categoria: string }
         Returns: string[]
       }
+      cerrar_caja: { Args: { p_conteo: Json; p_nota?: string }; Returns: Json }
+      clientes_con_saldo: {
+        Args: never
+        Returns: {
+          activo: boolean
+          id: string
+          identificacion: string
+          limite_credito: number
+          nombre: string
+          saldo: number
+          telefono: string
+          ultima_compra: string
+        }[]
+      }
+      crear_producto_pendiente: {
+        Args: { p_codigo?: string; p_nombre: string; p_precio: number }
+        Returns: Json
+      }
+      cuenta_caja: { Args: never; Returns: string }
       cuentas_por_pagar: {
         Args: never
         Returns: {
@@ -1702,14 +2251,21 @@ export type Database = {
         Args: { p_compra: string; p_lineas: Json }
         Returns: undefined
       }
+      devolver_venta: { Args: { p: Json }; Returns: number }
       ean13_verificador: { Args: { p_doce: string }; Returns: number }
       entrar_compra: { Args: { p_compra: string }; Returns: Json }
       enviar_conteo: { Args: { p_conteo: string }; Returns: undefined }
       exigir_permiso: { Args: { p_permiso: string }; Returns: undefined }
       generar_codigo_interno: { Args: never; Returns: string }
+      guardar_ajustes_venta: { Args: { p: Json }; Returns: undefined }
       guardar_categoria: { Args: { p: Json }; Returns: string }
+      guardar_cliente: { Args: { p: Json }; Returns: string }
       guardar_cuenta: { Args: { p: Json }; Returns: string }
       guardar_envase: { Args: { p: Json }; Returns: string }
+      guardar_forma_pago: {
+        Args: { p_activa: boolean; p_cuenta: string; p_id: string }
+        Returns: undefined
+      }
       guardar_lineas_compra: {
         Args: { p_compra: string; p_lineas: Json }
         Returns: number
@@ -1765,6 +2321,13 @@ export type Database = {
           proveedor_id: string
         }[]
       }
+      productos_favoritos: {
+        Args: { p_limite?: number }
+        Returns: {
+          producto_id: string
+          puntos: number
+        }[]
+      }
       productos_sin_movimiento: {
         Args: { p_dias: number }
         Returns: {
@@ -1775,10 +2338,13 @@ export type Database = {
           unidad_base: string
         }[]
       }
+      puede_ver_venta: { Args: { p_usuario: string }; Returns: boolean }
+      reabrir_caja: { Args: never; Returns: undefined }
       recibir_viaje: {
         Args: { p_lineas?: Json; p_viaje: string }
         Returns: Json
       }
+      registrar_abono: { Args: { p: Json }; Returns: undefined }
       registrar_compra: { Args: { p: Json }; Returns: Json }
       registrar_dinero: {
         Args: {
@@ -1819,7 +2385,11 @@ export type Database = {
         }
         Returns: number
       }
+      registrar_venta: { Args: { p: Json }; Returns: Json }
       resetear_pin: { Args: { p_usuario: string }; Returns: undefined }
+      resumen_caja: { Args: { p_caja?: string }; Returns: Json }
+      saldo_cuenta: { Args: { p_cuenta: string }; Returns: number }
+      saldo_fiado: { Args: { p_cliente: string }; Returns: number }
       saldos_cuentas: {
         Args: never
         Returns: {
@@ -1848,6 +2418,10 @@ export type Database = {
       tengo_pin: { Args: never; Returns: boolean }
       tiene_permiso: { Args: { p_permiso: string }; Returns: boolean }
       usuario_activo: { Args: never; Returns: boolean }
+      usuario_tiene_permiso: {
+        Args: { p_permiso: string; p_usuario: string }
+        Returns: boolean
+      }
       valores_categoria: {
         Args: { p_categoria: string }
         Returns: {

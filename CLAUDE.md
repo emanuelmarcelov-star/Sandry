@@ -161,6 +161,12 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
   (ignorado por git) apunta a la tienda real sin clave secreta → `next build` y
   `next start -H 0.0.0.0 -p 3200`.
 - 29/10/2026 — **Fase 4 aprobada** (probada en la PC).
+- 29/10/2026 — Fase 5 (punto de venta): se cobra **en la PC y en el celular por igual**
+  (el POS debe ir bien en los dos). **Sin stock: se deja vender con aviso** (configurable a
+  bloquear). Formas de pago activas: **efectivo, Deuna, transferencia y fiado** (tarjeta queda
+  creada pero apagada). **Una sola caja** para todas: se abre en la mañana y se cierra con
+  arqueo; cada venta queda a nombre de quien la hizo. El sobrante o faltante del cierre se
+  registra como corrección en la cuenta Caja.
 - 28/10/2026 — Fase 7 (comprobantes/factura electrónica) se hace AL FINAL, después de la
   fase 8. El ticket interno sin valor tributario se entrega en la fase 5.
 

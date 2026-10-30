@@ -32,6 +32,14 @@ export function anonimo(): SupabaseClient<Database> {
 /** Borra TODAS las cuentas del proyecto de pruebas (y con ellas perfiles, PIN, etc.). */
 export async function vaciarProyecto() {
   const a = admin();
+  // Ventas (fase 5).
+  await a.from("devoluciones").delete().gte("id", 0);
+  await a.from("abonos").delete().gte("id", 0);
+  await a.from("ventas").delete().not("id", "is", null);
+  await a.from("clientes").delete().not("id", "is", null);
+  await a.from("cajas").delete().not("id", "is", null);
+  await a.from("intentos_autorizacion").delete().gte("id", 0);
+  await a.from("ajustes").update({ venta_sin_stock: "avisar" }).eq("id", 1);
   // Abastecimiento e inventario (fase 4): primero lo que apunta a productos y cuentas.
   await a.from("conteos").delete().not("id", "is", null);
   await a.from("movimientos_envases").delete().gte("id", 0);
