@@ -27,5 +27,6 @@ export default defineConfig({
     // El abastecimiento se prueba en un celular (así se usa en el viaje de compras).
     { name: "abastecimiento", use: { ...devices["Pixel 7"] }, testMatch: /abastecimiento\.spec\.ts/, dependencies: ["catalogo"] },
     { name: "ventas", use: { ...devices["Desktop Chrome"] }, testMatch: /ventas\.spec\.ts/, dependencies: ["abastecimiento"] },
+    { name: "reportes", use: { ...devices["Desktop Chrome"] }, testMatch: /reportes\.spec\.ts/, dependencies: ["ventas"] },
   ],
 });

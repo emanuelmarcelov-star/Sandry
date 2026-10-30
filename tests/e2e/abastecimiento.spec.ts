@@ -57,6 +57,7 @@ test("compra del distribuidor: 2 jabas suman 24 unidades y sale el dinero de la 
 });
 
 test("viaje de compras en modo avión: no se pierde nada y al llegar se recibe", async ({ page, context }) => {
+  test.setTimeout(90_000); // espera a que vuelva la señal y se envíe todo
   await page.goto("/compras/viaje");
   await page.getByRole("button", { name: "Iniciar viaje de compras" }).click();
   await expect(page.getByRole("button", { name: /Registrar compra en un lugar/ })).toBeVisible();

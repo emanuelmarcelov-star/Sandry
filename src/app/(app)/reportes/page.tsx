@@ -106,7 +106,7 @@ function Tabla({ titulo, filas, cabeza }: { titulo: string; filas: (string | num
           <thead>
             <tr className="text-left text-sm text-muted-foreground">
               {cabeza.map((c, i) => (
-                <th key={c} className={cn("py-1 font-normal", i > 0 && "text-right")}>
+                <th key={i} className={cn("py-1 font-normal", i > 0 && "text-right")}>
                   {c}
                 </th>
               ))}
@@ -140,7 +140,7 @@ function Cuerpo({ r, desde, hasta }: { r: Reporte; desde: string; hasta: string 
       <p className="text-lg font-medium">{titulo}</p>
       {!r.cantidad_ventas && <p className="text-muted-foreground">{t.sinDatos}</p>}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Tile titulo={t.ventas} valor={$(r.ventas)} ayuda={`${r.cantidad_ventas} · ${t.ticket} ${$(r.ticket_promedio)}`} />
+        <Tile titulo={t.ventas} valor={$(r.ventas)} ayuda={`${t.numeroVentas}: ${r.cantidad_ventas} · ${t.ticket}: ${$(r.ticket_promedio)}`} />
         <Tile titulo={t.gananciaBruta} valor={$(r.ganancia_bruta)} ayuda={r.margen !== null ? `${t.margen} ${r.margen} %` : undefined} />
         <Tile titulo={t.gastos} valor={$(r.gastos)} ayuda={`${t.perdidas}: ${$(r.perdidas)}`} />
         <Tile titulo={t.gananciaNeta} valor={$(r.ganancia_neta)} ayuda={t.ayudaNeta} destacado negativo={Number(r.ganancia_neta) < 0} />
@@ -176,7 +176,7 @@ function Cuerpo({ r, desde, hasta }: { r: Reporte; desde: string; hasta: string 
         <Tabla titulo={t.masRentables} cabeza={["", t.gananciaBruta]} filas={top.masRentables.map((p) => [p.producto, $(p.ganancia)])} />
         <Tabla titulo={t.menosRentables} cabeza={["", t.gananciaBruta]} filas={top.menosRentables.map((p) => [p.producto, $(p.ganancia)])} />
         <Tabla titulo={t.aPerdida} cabeza={["", t.gananciaBruta]} filas={top.aPerdida.map((p) => [p.producto, $(p.ganancia)])} />
-        <Tabla titulo={t.porTrabajadora} cabeza={["", "Ventas", t.ventas]} filas={r.por_trabajadora.map((p) => [p.nombre, p.ventas, $(p.total)])} />
+        <Tabla titulo={t.porTrabajadora} cabeza={["", t.numeroVentas, t.ventas]} filas={r.por_trabajadora.map((p) => [p.nombre, p.ventas, $(p.total)])} />
         <Tabla
           titulo={t.gastosPorGrupo}
           filas={[
@@ -191,7 +191,7 @@ function Cuerpo({ r, desde, hasta }: { r: Reporte; desde: string; hasta: string 
           filas={r.flujo.map((f) => [t.motivos[f.motivo] ?? f.motivo, f.entra ? $(f.entra) : "", f.sale ? $(f.sale) : ""])}
         />
         <Tabla titulo={t.flujoPorCuenta} cabeza={["", t.entra, t.sale, t.saldo]} filas={r.flujo_por_cuenta.map((c) => [c.cuenta, $(c.entra), $(c.sale), $(c.saldo)])} />
-        <Tabla titulo={t.comprasPorLugar} cabeza={["", "Compras", t.compras]} filas={r.compras_por_lugar.map((c) => [c.lugar, c.compras, $(c.total)])} />
+        <Tabla titulo={t.comprasPorLugar} cabeza={["", "Nº", t.compras]} filas={r.compras_por_lugar.map((c) => [c.lugar, c.compras, $(c.total)])} />
         <section className="grid gap-2">
           <h2 className="text-lg font-semibold">{t.inventario}</h2>
           <p className="flex justify-between">

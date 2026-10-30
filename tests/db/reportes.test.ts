@@ -66,8 +66,19 @@ describe("gastos", () => {
       p: { id: randomUUID(), categoria_id: categorias.Gasolina, monto: 20, cuenta_id: cuentas.Caja, personal: true, vehiculo_id: carro!, galones: 7.5, kilometraje: 120500 } as unknown as Json,
     });
     expect(r.error).toBeNull();
-    const { data: mov } = await duena.from("movimientos_dinero").select("motivo, monto").eq("referencia_tipo", "gasto").order("id", { ascending: false }).limit(1).single();
-    expect([mov?.motivo, n(mov?.monto)]).toEqual(["retiro", -20]);
+    // Sale de la caja y entra a «Dinero personal», igual que un retiro.
+    const { data: movs } = await duena.from("movimientos_dinero").select("motivo, monto").eq("referencia_tipo", "gasto").order("id", { ascending: false }).limit(2);
+    expect(movs?.map((m) => [m.motivo, n(m.monto)])).toEqual([["retiro", 20], ["retiro", -20]]);
+    expect((await saldos())["Dinero personal de la dueña"]).toBe(20);
+  });
+
+  test("gasto personal pagado con su propio dinero: no toca la plata de la tienda", async () => {
+    const antes = await saldos();
+    const r = await duena.rpc("registrar_gasto", {
+      p: { id: randomUUID(), categoria_id: categorias["Lavado del carro"], monto: 4, cuenta_id: cuentas["Dinero personal de la dueña"], personal: true } as unknown as Json,
+    });
+    expect(r.error).toBeNull();
+    expect(await saldos()).toEqual(antes);
   });
 
   test("anular un gasto devuelve el dinero", async () => {
@@ -109,7 +120,7 @@ describe("reporte de ganancia", () => {
     expect(n(r.margen)).toBe(33.3);
     // Gastos del negocio: luz 12 + arriendo 150 (la gasolina personal y el anulado no cuentan).
     expect(n(r.gastos)).toBe(162);
-    expect(n(r.gastos_personales)).toBe(20);
+    expect(n(r.gastos_personales)).toBe(24); // gasolina 20 + lavado 4
     expect(n(r.perdidas)).toBe(1.5); // 2 cocas a $0.75 de consumo de la casa
     expect(n(r.ganancia_neta)).toBe(2.5 - 162 - 1.5);
     expect(r.por_forma).toEqual({ efectivo: 10 });
