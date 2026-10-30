@@ -4,7 +4,9 @@ import { Aviso } from "@/components/formulario";
 import { buttonVariants } from "@/components/ui/button";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { puede, requerirUsuarioActivo } from "@/server/sesion";
-import { textos } from "@/lib/textos";
+import { textos, textosPanel } from "@/lib/textos";
+import { PanelInicio } from "@/components/reportes/panel-inicio";
+import { panelInicio } from "@/server/reportes";
 
 const t = textos.inicio;
 
@@ -28,6 +30,7 @@ async function Contenido({ searchParams }: { searchParams: PageProps<"/">["searc
       : Promise.resolve({ count: 0 }),
   ]);
   const primerNombre = usuario.nombre.split(" ")[0];
+  const panel = puede(usuario, "reportes.ver") ? await panelInicio() : null;
 
   return (
     <div className="grid gap-6">
@@ -52,7 +55,15 @@ async function Contenido({ searchParams }: { searchParams: PageProps<"/">["searc
           </Link>
         </Aviso>
       )}
-      <p className="text-lg text-muted-foreground">{t.enConstruccion}</p>
+      {panel ? (
+        <PanelInicio p={panel} />
+      ) : (
+        puede(usuario, "ventas.vender") && (
+          <Link href="/vender" className={buttonVariants({ size: "lg", className: "h-16 justify-self-start text-xl" })}>
+            {textosPanel.irVender}
+          </Link>
+        )
+      )}
     </div>
   );
 }

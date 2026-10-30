@@ -44,6 +44,7 @@ export type AjustesVenta = {
   descuentoMaximo: string;
   alcoholDesde: string | null;
   alcoholHasta: string | null;
+  correoResumen: string;
 };
 
 export function urlImagenTienda(ruta: string | null): string | null {
@@ -54,7 +55,7 @@ export async function ajustesVenta(): Promise<AjustesVenta> {
   const supabase = await clienteServidor();
   const { data: a } = await supabase
     .from("ajustes")
-    .select("nombre_tienda, venta_sin_stock, deuna_qr_ruta, banco, ticket_ancho, ticket_mensaje, descuento_max_sin_autorizacion, alcohol_desde, alcohol_hasta")
+    .select("nombre_tienda, venta_sin_stock, deuna_qr_ruta, banco, ticket_ancho, ticket_mensaje, descuento_max_sin_autorizacion, alcohol_desde, alcohol_hasta, correo_resumen")
     .maybeSingle();
   return {
     tienda: a?.nombre_tienda ?? "Sandry",
@@ -66,6 +67,7 @@ export async function ajustesVenta(): Promise<AjustesVenta> {
     descuentoMaximo: String(a?.descuento_max_sin_autorizacion ?? 5),
     alcoholDesde: a?.alcohol_desde?.slice(0, 5) ?? null,
     alcoholHasta: a?.alcohol_hasta?.slice(0, 5) ?? null,
+    correoResumen: a?.correo_resumen ?? "",
   };
 }
 

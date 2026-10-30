@@ -2371,6 +2371,7 @@ export type Database = {
           ultima_compra: string
         }[]
       }
+      correo_resumen_dia: { Args: never; Returns: string }
       crear_producto_pendiente: {
         Args: { p_codigo?: string; p_nombre: string; p_precio: number }
         Returns: Json

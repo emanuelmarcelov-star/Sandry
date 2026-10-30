@@ -4,10 +4,14 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { mensajeError, type Resultado } from "@/lib/errores";
-import { leerNumero } from "@/lib/dinero";
+import { formatoDolares, formatoFecha, hoyEcuador, leerNumero } from "@/lib/dinero";
 import { armarVenta, type Carrito, type PagoVenta } from "@/lib/ventas";
 import type { Json } from "@/lib/supabase/tipos";
-import { requerirPermiso } from "@/server/sesion";
+import { puede, requerirPermiso } from "@/server/sesion";
+import { textosVentas } from "@/lib/textos";
+import { armarCorreo, correoConfigurado, enviarCorreo } from "@/server/correo";
+import { obtenerReporte } from "@/server/reportes";
+import { resumenCaja } from "@/server/ventas";
 
 function refrescar() {
   revalidatePath("/vender", "layout");
@@ -92,7 +96,7 @@ export async function abrirCaja(fondo: string): Promise<Resultado> {
 }
 
 export async function cerrarCaja(conteo: Record<string, string>, nota: string): Promise<Resultado<{ contado: string; esperado: string; diferencia: string }>> {
-  await requerirPermiso("caja.abrir_cerrar");
+  const yo = await requerirPermiso("caja.abrir_cerrar");
   const limpio: Record<string, number> = {};
   for (const [d, c] of Object.entries(conteo)) {
     const n = Number.parseInt(c || "0", 10);
@@ -103,8 +107,42 @@ export async function cerrarCaja(conteo: Record<string, string>, nota: string): 
   const { data, error } = await supabase.rpc("cerrar_caja", { p_conteo: limpio, p_nota: nota });
   if (error) return { ok: false, mensaje: mensajeError(error, "No se pudo cerrar la caja.") };
   refrescar();
-  const r = data as { contado: number; esperado: number; diferencia: number };
-  return { ok: true, datos: { contado: String(r.contado), esperado: String(r.esperado), diferencia: String(r.diferencia) }, mensaje: "Caja cerrada." };
+  const r = data as { id: string; contado: number; esperado: number; diferencia: number };
+  const enviado = await enviarResumenDelDia(r.id, yo.nombre, puede(yo, "reportes.ver"));
+  return {
+    ok: true,
+    datos: { contado: String(r.contado), esperado: String(r.esperado), diferencia: String(r.diferencia) },
+    mensaje: enviado ? `Caja cerrada. Resumen enviado a ${enviado}.` : "Caja cerrada.",
+  };
+}
+
+/**
+ * Resumen del día por correo al cerrar la caja (si el Gmail de la tienda está
+ * configurado). La ganancia solo va si quien cierra puede ver reportes.
+ * Nunca impide cerrar la caja: si falla, solo no se envía.
+ */
+async function enviarResumenDelDia(cajaId: string, quien: string, conGanancia: boolean): Promise<string | null> {
+  if (!correoConfigurado()) return null;
+  const supabase = await clienteServidor();
+  const [{ data: para }, caja] = await Promise.all([supabase.rpc("correo_resumen_dia"), resumenCaja(cajaId)]);
+  if (!para || !caja) return null;
+  const $ = (v: string | number | null) => formatoDolares(Number(v ?? 0));
+  const filas: [string, string][] = [
+    ["Ventas", `${caja.ventas} · ${$(caja.totalVentas)}`],
+    ...Object.entries(caja.porForma).map(([f, v]) => [`   ${textosVentas.ventas.pagos[f] ?? f}`, $(v)] as [string, string]),
+    ["Abonos de fiados", $(caja.abonos)],
+    ["Efectivo esperado", $(caja.esperado)],
+    ["Efectivo contado", $(caja.contado)],
+    ["Diferencia", $(caja.diferencia)],
+  ];
+  if (conGanancia) {
+    const { reporte } = await obtenerReporte(hoyEcuador(), hoyEcuador());
+    if (reporte) filas.splice(1, 0, ["Ganancia bruta", $(reporte.ganancia_bruta)], ["Gastos de hoy", $(reporte.gastos)]);
+  }
+  filas.push(["Cerró", quien]);
+  const { texto, html } = armarCorreo(`Resumen del día ${formatoFecha(new Date())}`, filas);
+  const r = await enviarCorreo(String(para), `Sandry: resumen del ${formatoFecha(new Date())}`, texto, html);
+  return r.ok ? String(para) : null;
 }
 
 export async function reabrirCaja(): Promise<Resultado> {
@@ -166,6 +204,7 @@ export async function guardarAjustesVenta(entrada: {
   banco: Record<string, string>;
   alcoholDesde: string;
   alcoholHasta: string;
+  correoResumen: string;
   formas: { id: string; cuentaId: string; activa: boolean }[];
 }): Promise<Resultado> {
   await requerirPermiso("ajustes.gestionar");
@@ -178,6 +217,7 @@ export async function guardarAjustesVenta(entrada: {
       banco: entrada.banco,
       alcohol_desde: entrada.alcoholDesde,
       alcohol_hasta: entrada.alcoholHasta,
+      correo_resumen: entrada.correoResumen,
     },
   });
   if (error) return { ok: false, mensaje: mensajeError(error, "No se pudieron guardar los ajustes.") };

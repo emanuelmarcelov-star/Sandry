@@ -5,7 +5,7 @@ import { MenuPrincipal, type OpcionMenu } from "@/components/menu-principal";
 import { VigilanteInactividad } from "@/components/vigilante-inactividad";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { puede, requerirUsuarioActivo } from "@/server/sesion";
-import { textos, textosCatalogo, textosCompras, textosDinero, textosInventario, textosVentas } from "@/lib/textos";
+import { textos, textosCatalogo, textosCompras, textosDinero, textosGastos, textosInventario, textosReportes, textosVentas } from "@/lib/textos";
 
 const t = textos.menu;
 
@@ -42,6 +42,8 @@ async function MenuDeLaPersona() {
   }
   if (puede(usuario, "productos.ver")) opciones.push({ href: "/inventario", etiqueta: textosInventario.menu, icono: "ClipboardList" });
   if (puede(usuario, "dinero.ver")) opciones.push({ href: "/dinero", etiqueta: textosDinero.menu, icono: "Wallet" });
+  if (puede(usuario, "gastos.registrar")) opciones.push({ href: "/gastos", etiqueta: textosGastos.menu, icono: "Receipt" });
+  if (puede(usuario, "reportes.ver")) opciones.push({ href: "/reportes", etiqueta: textosReportes.menu, icono: "ChartColumn" });
   if (puede(usuario, "usuarios.gestionar")) {
     opciones.push({ href: "/usuarios", etiqueta: t.usuarios, icono: "Users" });
     opciones.push({ href: "/usuarios/roles", etiqueta: t.roles, icono: "ShieldCheck" });

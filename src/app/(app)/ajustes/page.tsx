@@ -6,6 +6,7 @@ import { FormularioAjustes } from "./formulario-ajustes";
 import { AjustesPuntoVenta } from "./ajustes-venta";
 import { listarCuentas } from "@/server/abastecimiento";
 import { ajustesVenta, formasDePago } from "@/server/ventas";
+import { correoConfigurado } from "@/server/correo";
 
 export default function Ajustes() {
   return (
@@ -34,7 +35,7 @@ async function Contenido() {
           redondeoPrecio: String(data?.redondeo_precio ?? "0.05"),
         }}
       />
-      <AjustesPuntoVenta ajustes={venta} formas={formas} cuentas={cuentas.filter((c) => c.tipo !== "personal").map((c) => ({ id: c.id, nombre: c.nombre }))} />
+      <AjustesPuntoVenta correoListo={correoConfigurado()} ajustes={venta} formas={formas} cuentas={cuentas.filter((c) => c.tipo !== "personal").map((c) => ({ id: c.id, nombre: c.nombre }))} />
     </div>
   );
 }

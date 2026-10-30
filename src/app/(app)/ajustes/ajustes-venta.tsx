@@ -18,10 +18,12 @@ export function AjustesPuntoVenta({
   ajustes,
   formas: formasIniciales,
   cuentas,
+  correoListo,
 }: {
   ajustes: AjustesVenta;
   formas: FormaPago[];
   cuentas: { id: string; nombre: string }[];
+  correoListo: boolean;
 }) {
   const router = useRouter();
   const [sinStock, setSinStock] = useState<string>(ajustes.ventaSinStock);
@@ -30,6 +32,7 @@ export function AjustesPuntoVenta({
   const [banco, setBanco] = useState<Record<string, string>>({ ...ajustes.banco } as Record<string, string>);
   const [desde, setDesde] = useState(ajustes.alcoholDesde ?? "");
   const [hasta, setHasta] = useState(ajustes.alcoholHasta ?? "");
+  const [correo, setCorreo] = useState(ajustes.correoResumen);
   const [formas, setFormas] = useState(formasIniciales.map((f) => ({ id: f.id, nombre: f.nombre, cuentaId: f.cuentaId ?? "", activa: f.activa })));
   const [error, setError] = useState<string>();
   const [guardando, iniciar] = useTransition();
@@ -87,6 +90,7 @@ export function AjustesPuntoVenta({
               banco,
               alcoholDesde: desde,
               alcoholHasta: hasta,
+              correoResumen: correo,
               formas: formas.map((f) => ({ id: f.id, cuentaId: f.cuentaId, activa: f.activa })),
             });
             if (!r.ok) return setError(r.mensaje);
@@ -160,6 +164,9 @@ export function AjustesPuntoVenta({
             </Campo>
           </div>
         </fieldset>
+        <Campo id="aj-correo" etiqueta={t.correoResumen} ayuda={correoListo ? t.correoResumenAyuda : t.correoSinConfigurar} opcional>
+          <Input id="aj-correo" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder={t.correoPlaceholder} />
+        </Campo>
         <Button type="submit" size="lg" disabled={guardando}>
           {guardando ? textos.general.guardando : t.guardar}
         </Button>
