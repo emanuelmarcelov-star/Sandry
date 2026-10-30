@@ -1,8 +1,9 @@
 # Fase 5 — Punto de venta: qué hay y cómo probarlo
 
 Menú → **Vender** (y **Clientes**). Mientras Netlify no tenga créditos (hasta el 28/11/2026),
-se prueba en la computadora: **http://localhost:3200**, o desde el celular en el mismo wifi:
-**http://192.168.18.212:3200**.
+se prueba en la computadora: **http://localhost:3200**, o desde el celular en el mismo wifi
+(la dirección cambia según el wifi; pídeme la de ese momento), por ejemplo:
+**http://192.168.0.168:3200**.
 
 ## Qué se hizo
 
