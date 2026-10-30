@@ -664,7 +664,7 @@ export const textosVentas = {
     favoritos: "Más vendidos",
     todas: "Todas",
     escanear: "Cámara",
-    varios: "Varios",
+    varios: "Venta libre",
     consultar: "Consultar precio",
     consultando: "Modo consultar precio: no se agrega al carrito.",
     espera: "En espera (F8)",
