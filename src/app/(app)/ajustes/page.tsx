@@ -3,6 +3,9 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { requerirPermiso } from "@/server/sesion";
 import { textos } from "@/lib/textos";
 import { FormularioAjustes } from "./formulario-ajustes";
+import { AjustesPuntoVenta } from "./ajustes-venta";
+import { listarCuentas } from "@/server/abastecimiento";
+import { ajustesVenta, formasDePago } from "@/server/ventas";
 
 export default function Ajustes() {
   return (
@@ -15,7 +18,12 @@ export default function Ajustes() {
 async function Contenido() {
   await requerirPermiso("ajustes.gestionar");
   const supabase = await clienteServidor();
-  const { data } = await supabase.from("ajustes").select("minutos_inactividad, descuento_max_sin_autorizacion, redondeo_precio").maybeSingle();
+  const [{ data }, venta, formas, cuentas] = await Promise.all([
+    supabase.from("ajustes").select("minutos_inactividad, descuento_max_sin_autorizacion, redondeo_precio").maybeSingle(),
+    ajustesVenta(),
+    formasDePago(false),
+    listarCuentas(),
+  ]);
   return (
     <div className="grid max-w-xl gap-6">
       <h1 className="text-3xl font-bold">{textos.ajustes.titulo}</h1>
@@ -26,6 +34,7 @@ async function Contenido() {
           redondeoPrecio: String(data?.redondeo_precio ?? "0.05"),
         }}
       />
+      <AjustesPuntoVenta ajustes={venta} formas={formas} cuentas={cuentas.filter((c) => c.tipo !== "personal").map((c) => ({ id: c.id, nombre: c.nombre }))} />
     </div>
   );
 }

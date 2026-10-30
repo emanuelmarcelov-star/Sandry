@@ -5,7 +5,7 @@ import { MenuPrincipal, type OpcionMenu } from "@/components/menu-principal";
 import { VigilanteInactividad } from "@/components/vigilante-inactividad";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { puede, requerirUsuarioActivo } from "@/server/sesion";
-import { textos, textosCatalogo, textosCompras, textosDinero, textosInventario } from "@/lib/textos";
+import { textos, textosCatalogo, textosCompras, textosDinero, textosInventario, textosVentas } from "@/lib/textos";
 
 const t = textos.menu;
 
@@ -34,6 +34,8 @@ async function MenuDeLaPersona() {
   const { data: ajustes } = await supabase.from("ajustes").select("minutos_inactividad").maybeSingle();
 
   const opciones: OpcionMenu[] = [{ href: "/", etiqueta: t.inicio, icono: "Home" }];
+  if (puede(usuario, "ventas.vender")) opciones.push({ href: "/vender", etiqueta: textosVentas.menu, icono: "ScanBarcode" });
+  if (puede(usuario, "clientes.gestionar")) opciones.push({ href: "/clientes", etiqueta: textosVentas.menuClientes, icono: "Contact" });
   if (puede(usuario, "productos.ver")) opciones.push({ href: "/catalogo", etiqueta: textosCatalogo.menu, icono: "Package" });
   if (puede(usuario, "compras.registrar") || puede(usuario, "compras.recibir")) {
     opciones.push({ href: "/compras", etiqueta: textosCompras.menu, icono: "ShoppingCart" });

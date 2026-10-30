@@ -59,6 +59,7 @@ export function FormularioProducto({
   puedeCambiarPrecios,
   puedeVerCostos,
   urlFotos,
+  codigoInicial,
 }: {
   valores: ValoresIniciales | null;
   categorias: CategoriaOpcion[];
@@ -66,6 +67,8 @@ export function FormularioProducto({
   puedeCambiarPrecios: boolean;
   puedeVerCostos: boolean;
   urlFotos: string;
+  /** Producto nuevo que viene de la caja: el código escaneado ya puesto. */
+  codigoInicial?: string;
 }) {
   const router = useRouter();
   const nuevo = !valores?.id;
@@ -77,7 +80,7 @@ export function FormularioProducto({
 
   const formulario = useForm<DatosProducto>({
     resolver: zodResolver(esquemaProducto),
-    defaultValues: valores ?? NUEVO,
+    defaultValues: valores ?? (codigoInicial ? { ...NUEVO, presentaciones: [{ ...NUEVO.presentaciones[0], codigos: codigoInicial }] } : NUEVO),
   });
   const { register, control, handleSubmit, formState, setValue, getValues } = formulario;
   const { fields, append, remove } = useFieldArray({ control, name: "presentaciones" });

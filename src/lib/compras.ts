@@ -159,7 +159,10 @@ export function armarLineas(lineas: LineaCompra[]) {
  * Busca en la lista guardada en el celular: por código de barras exacto, por
  * código corto, o por todas las palabras escritas (sin tildes ni mayúsculas).
  */
-export function buscarLocal(productos: ProductoLigero[], texto: string, limite = 12): { producto: ProductoLigero; presentacionId?: string }[] {
+/** Lo mínimo para buscar un producto (sirve para compras, ventas y conteos). */
+export type Buscable = { id: string; nombre: string; marca: string; sinonimos: string[]; plu: string | null; presentaciones: { id: string; codigos: string[] }[] };
+
+export function buscarLocal<T extends Buscable>(productos: T[], texto: string, limite = 12): { producto: T; presentacionId?: string }[] {
   const t = texto.trim();
   if (!t) return [];
   const codigo = t.replace(/\s/g, "");
@@ -178,7 +181,7 @@ export function buscarLocal(productos: ProductoLigero[], texto: string, limite =
       const puntos = (nombre.startsWith(palabras[0]) ? 2 : 0) + (nombre.includes(palabras.join(" ")) ? 1 : 0);
       return { producto: p, puntos };
     })
-    .filter((x): x is { producto: ProductoLigero; puntos: number } => x !== null)
+    .filter((x): x is { producto: T; puntos: number } => x !== null)
     .sort((a, b) => b.puntos - a.puntos || a.producto.nombre.localeCompare(b.producto.nombre, "es"))
     .map(({ producto }) => ({ producto }));
   if (porPlu) return [{ producto: porPlu }, ...resultado.filter((r) => r.producto.id !== porPlu.id)].slice(0, limite);

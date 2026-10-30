@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, History, Home, KeyRound, LogOut, Menu, Package, Settings, ShieldCheck, ShoppingCart, UserRound, Users, Wallet, X } from "lucide-react";
+import { ClipboardList, Contact, History, Home, ScanBarcode, KeyRound, LogOut, Menu, Package, Settings, ShieldCheck, ShoppingCart, UserRound, Users, Wallet, X } from "lucide-react";
 import { useCambiarTema } from "@/components/tema";
 import { textos } from "@/lib/textos";
 import { cn } from "cn";
@@ -12,7 +12,7 @@ const t = textos.menu;
 
 export type OpcionMenu = { href: string; etiqueta: string; icono: keyof typeof ICONOS };
 
-const ICONOS = { Home, Package, ShoppingCart, ClipboardList, Wallet, Users, ShieldCheck, History, Settings, UserRound };
+const ICONOS = { Home, ScanBarcode, Contact, Package, ShoppingCart, ClipboardList, Wallet, Users, ShieldCheck, History, Settings, UserRound };
 
 /** Botón "Menú" con las secciones permitidas, cambio de usuario, tema y salir. */
 export function MenuPrincipal({ nombre, rol, opciones }: { nombre: string; rol: string; opciones: OpcionMenu[] }) {

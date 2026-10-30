@@ -17,7 +17,7 @@ import { FormularioProducto, type ValoresIniciales } from "./formulario-producto
 const t = textosCatalogo.formulario;
 
 /** Pantalla de crear (sin id) o editar (con id) un producto. */
-export async function PaginaProducto({ id }: { id?: string }) {
+export async function PaginaProducto({ id, codigo }: { id?: string; codigo?: string }) {
   const yo = await requerirPermiso("productos.editar");
   const supabase = await clienteServidor();
   const [categorias, producto, { data: ajustes }] = await Promise.all([
@@ -178,6 +178,7 @@ export async function PaginaProducto({ id }: { id?: string }) {
         puedeCambiarPrecios={puede(yo, "precios.cambiar")}
         puedeVerCostos={verCostos}
         urlFotos={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/fotos-productos/`}
+        codigoInicial={codigo}
       />
       {producto && historial.length > 0 && (
         <section className="grid max-w-3xl gap-2">
