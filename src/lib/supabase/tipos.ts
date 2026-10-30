@@ -107,6 +107,7 @@ export type Database = {
           alcohol_desde: string | null
           alcohol_hasta: string | null
           banco: Json
+          correo_resumen: string
           descuento_max_sin_autorizacion: number
           deuna_qr_ruta: string | null
           dias_aviso_caducidad: number
@@ -125,6 +126,7 @@ export type Database = {
           alcohol_desde?: string | null
           alcohol_hasta?: string | null
           banco?: Json
+          correo_resumen?: string
           descuento_max_sin_autorizacion?: number
           deuna_qr_ruta?: string | null
           dias_aviso_caducidad?: number
@@ -143,6 +145,7 @@ export type Database = {
           alcohol_desde?: string | null
           alcohol_hasta?: string | null
           banco?: Json
+          correo_resumen?: string
           descuento_max_sin_autorizacion?: number
           deuna_qr_ruta?: string | null
           dias_aviso_caducidad?: number
@@ -307,6 +310,8 @@ export type Database = {
         Row: {
           activa: boolean
           es_transporte: boolean
+          es_vehiculo: boolean
+          grupo: string
           id: string
           nombre: string
           orden: number
@@ -314,6 +319,8 @@ export type Database = {
         Insert: {
           activa?: boolean
           es_transporte?: boolean
+          es_vehiculo?: boolean
+          grupo?: string
           id?: string
           nombre: string
           orden?: number
@@ -321,6 +328,8 @@ export type Database = {
         Update: {
           activa?: boolean
           es_transporte?: boolean
+          es_vehiculo?: boolean
+          grupo?: string
           id?: string
           nombre?: string
           orden?: number
@@ -558,6 +567,42 @@ export type Database = {
             columns: ["viaje_id"]
             isOneToOne: false
             referencedRelation: "viajes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conciliaciones: {
+        Row: {
+          fecha: string
+          forma_pago_id: string
+          verificado_en: string
+          verificado_por: string | null
+        }
+        Insert: {
+          fecha: string
+          forma_pago_id: string
+          verificado_en?: string
+          verificado_por?: string | null
+        }
+        Update: {
+          fecha?: string
+          forma_pago_id?: string
+          verificado_en?: string
+          verificado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conciliaciones_forma_pago_id_fkey"
+            columns: ["forma_pago_id"]
+            isOneToOne: false
+            referencedRelation: "formas_pago"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conciliaciones_verificado_por_fkey"
+            columns: ["verificado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
             referencedColumns: ["id"]
           },
         ]
@@ -918,36 +963,54 @@ export type Database = {
       }
       gastos: {
         Row: {
+          anulado: boolean
           categoria_id: string
           cuenta_id: string
           descripcion: string
           fecha: string
           foto_ruta: string | null
+          galones: number | null
           id: string
+          kilometraje: number | null
           monto: number
+          personal: boolean
+          recurrente_id: string | null
           usuario_id: string | null
+          vehiculo_id: string | null
           viaje_id: string | null
         }
         Insert: {
+          anulado?: boolean
           categoria_id: string
           cuenta_id: string
           descripcion?: string
           fecha?: string
           foto_ruta?: string | null
+          galones?: number | null
           id: string
+          kilometraje?: number | null
           monto: number
+          personal?: boolean
+          recurrente_id?: string | null
           usuario_id?: string | null
+          vehiculo_id?: string | null
           viaje_id?: string | null
         }
         Update: {
+          anulado?: boolean
           categoria_id?: string
           cuenta_id?: string
           descripcion?: string
           fecha?: string
           foto_ruta?: string | null
+          galones?: number | null
           id?: string
+          kilometraje?: number | null
           monto?: number
+          personal?: boolean
+          recurrente_id?: string | null
           usuario_id?: string | null
+          vehiculo_id?: string | null
           viaje_id?: string | null
         }
         Relationships: [
@@ -966,6 +1029,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "gastos_recurrente_id_fkey"
+            columns: ["recurrente_id"]
+            isOneToOne: false
+            referencedRelation: "gastos_recurrentes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "gastos_usuario_id_fkey"
             columns: ["usuario_id"]
             isOneToOne: false
@@ -973,10 +1043,62 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "gastos_vehiculo_id_fkey"
+            columns: ["vehiculo_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "gastos_viaje_id_fkey"
             columns: ["viaje_id"]
             isOneToOne: false
             referencedRelation: "viajes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gastos_recurrentes: {
+        Row: {
+          activo: boolean
+          categoria_id: string
+          cuenta_id: string | null
+          descripcion: string
+          dia: number
+          id: string
+          monto: number | null
+        }
+        Insert: {
+          activo?: boolean
+          categoria_id: string
+          cuenta_id?: string | null
+          descripcion: string
+          dia?: number
+          id?: string
+          monto?: number | null
+        }
+        Update: {
+          activo?: boolean
+          categoria_id?: string
+          cuenta_id?: string | null
+          descripcion?: string
+          dia?: number
+          id?: string
+          monto?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gastos_recurrentes_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_gasto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_recurrentes_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_dinero"
             referencedColumns: ["id"]
           },
         ]
@@ -1801,6 +1923,27 @@ export type Database = {
         }
         Relationships: []
       }
+      vehiculos: {
+        Row: {
+          activo: boolean
+          creado_en: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          creado_en?: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          creado_en?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
       venta_linea_costos: {
         Row: {
           costo_total: number
@@ -2153,6 +2296,7 @@ export type Database = {
         Returns: undefined
       }
       anular_conteo: { Args: { p_conteo: string }; Returns: undefined }
+      anular_gasto: { Args: { p_gasto: string }; Returns: undefined }
       aprobar_conteo: {
         Args: { p_conteo: string; p_productos?: string[] }
         Returns: number
@@ -2259,6 +2403,7 @@ export type Database = {
       generar_codigo_interno: { Args: never; Returns: string }
       guardar_ajustes_venta: { Args: { p: Json }; Returns: undefined }
       guardar_categoria: { Args: { p: Json }; Returns: string }
+      guardar_categoria_gasto: { Args: { p: Json }; Returns: string }
       guardar_cliente: { Args: { p: Json }; Returns: string }
       guardar_cuenta: { Args: { p: Json }; Returns: string }
       guardar_envase: { Args: { p: Json }; Returns: string }
@@ -2276,6 +2421,8 @@ export type Database = {
         Returns: string
       }
       guardar_proveedor: { Args: { p: Json }; Returns: string }
+      guardar_recurrente: { Args: { p: Json }; Returns: string }
+      guardar_vehiculo: { Args: { p: Json }; Returns: string }
       importar_productos: { Args: { p_productos: Json }; Returns: Json }
       iniciar_conteo: {
         Args: { p_categoria?: string; p_nombre: string }
@@ -2296,6 +2443,10 @@ export type Database = {
           vendido_4_semanas: number
         }[]
       }
+      marcar_conciliado: {
+        Args: { p_fecha: string; p_forma: string; p_verificado: boolean }
+        Returns: undefined
+      }
       marcar_etiquetas_impresas: {
         Args: { p_presentaciones: string[] }
         Returns: undefined
@@ -2312,6 +2463,7 @@ export type Database = {
       mover_dinero: { Args: { p: Json }; Returns: undefined }
       normalizar: { Args: { p_texto: string }; Returns: string }
       pagar_compra: { Args: { p: Json }; Returns: undefined }
+      panel_inicio: { Args: never; Returns: Json }
       precios_por_lugar: {
         Args: { p_producto: string }
         Returns: {
@@ -2344,6 +2496,19 @@ export type Database = {
         Args: { p_lineas?: Json; p_viaje: string }
         Returns: Json
       }
+      recurrentes_pendientes: {
+        Args: never
+        Returns: {
+          categoria: string
+          categoria_id: string
+          cuenta_id: string
+          descripcion: string
+          dia: number
+          id: string
+          monto: number
+          vence: string
+        }[]
+      }
       registrar_abono: { Args: { p: Json }; Returns: undefined }
       registrar_compra: { Args: { p: Json }; Returns: Json }
       registrar_dinero: {
@@ -2369,6 +2534,7 @@ export type Database = {
         Returns: undefined
       }
       registrar_gasto: { Args: { p: Json }; Returns: string }
+      registrar_ingreso: { Args: { p: Json }; Returns: undefined }
       registrar_lote: {
         Args: { p_cantidad: number; p_producto: string; p_vence: string }
         Returns: undefined
@@ -2386,6 +2552,15 @@ export type Database = {
         Returns: number
       }
       registrar_venta: { Args: { p: Json }; Returns: Json }
+      reporte: {
+        Args: {
+          p_categoria?: string
+          p_desde: string
+          p_hasta: string
+          p_usuario?: string
+        }
+        Returns: Json
+      }
       resetear_pin: { Args: { p_usuario: string }; Returns: undefined }
       resumen_caja: { Args: { p_caja?: string }; Returns: Json }
       saldo_cuenta: { Args: { p_cuenta: string }; Returns: number }

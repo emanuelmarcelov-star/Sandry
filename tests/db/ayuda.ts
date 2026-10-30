@@ -49,6 +49,9 @@ export async function vaciarProyecto() {
   await a.from("lotes").delete().gte("id", 0);
   await a.from("compras").delete().not("id", "is", null);
   await a.from("gastos").delete().not("id", "is", null);
+  await a.from("vehiculos").delete().not("id", "is", null);
+  await a.from("conciliaciones").delete().not("forma_pago_id", "is", null);
+  await a.from("gastos_recurrentes").update({ monto: null, activo: true }).not("id", "is", null);
   await a.from("viajes").delete().not("id", "is", null);
   await a.from("movimientos_dinero").delete().gte("id", 0);
   await a.from("proveedores").delete().not("id", "is", null);

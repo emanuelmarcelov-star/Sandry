@@ -169,6 +169,12 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
   creada pero apagada). **Una sola caja** para todas: se abre en la mañana y se cierra con
   arqueo; cada venta queda a nombre de quien la hizo. El sobrante o faltante del cierre se
   registra como corrección en la cuenta Caja.
+- 30/10/2026 — **Fase 5 aprobada** (probada en la PC). Fase 6: el carro es también de la familia
+  y **cada gasto del carro se marca «tienda» o «personal»** (lo personal pagado con plata de la
+  tienda cuenta como retiro de la dueña, no como gasto del negocio). Gastos fijos mensuales con
+  aviso: **arriendo, luz, agua, internet y sueldo de la trabajadora**. **Resumen del día al
+  cerrar caja: en pantalla y por correo** (Gmail de la tienda; la contraseña de aplicación va
+  solo en variables de entorno, nunca en git ni en el chat).
 - 28/10/2026 — Fase 7 (comprobantes/factura electrónica) se hace AL FINAL, después de la
   fase 8. El ticket interno sin valor tributario se entrega en la fase 5.
 
