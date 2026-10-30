@@ -159,7 +159,9 @@ usa `useOffline` de `next/offline` (`experimental.useOffline`).
   mes; el ciclo va del 28 al 27). Desde ahora se publica en la web **solo cuando una fase está
   lista para probar**. Mientras no haya créditos se prueba en la PC: `.env.production.local`
   (ignorado por git) apunta a la tienda real sin clave secreta → `next build` y
-  `next start -H 0.0.0.0 -p 3200`.
+  `next start -H 0.0.0.0 -p 3200`. La dueña la abre con `Desktop\Abrir Sandry.bat`.
+  **Ojo:** las pruebas e2e reconstruyen `.next` con la base de PRUEBAS; después de correrlas,
+  volver a hacer `next build` sin las variables de pruebas para que la PC use la tienda real.
 - 29/10/2026 — **Fase 4 aprobada** (probada en la PC).
 - 29/10/2026 — Fase 5 (punto de venta): se cobra **en la PC y en el celular por igual**
   (el POS debe ir bien en los dos). **Sin stock: se deja vender con aviso** (configurable a
